@@ -56,6 +56,17 @@ class Settings:
     claude_model: str = field(
         default_factory=lambda: os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
     )
+    session_secret: str = field(
+        default_factory=lambda: os.getenv("SESSION_SECRET", "change-me-in-production")
+    )
+    allowed_emails: list[str] = field(
+        default_factory=lambda: [
+            s.strip().lower()
+            for s in os.getenv(
+                "ALLOWED_EMAILS", "szykon@gmail.com,simon@progrise.dev"
+            ).split(",")
+        ]
+    )
     host: str = field(default_factory=lambda: os.getenv("HOST", "0.0.0.0"))
     port: int = field(default_factory=lambda: int(os.getenv("PORT", "8000")))
     base_url: str = field(

@@ -14,6 +14,8 @@
                 <span id="last-run-info" style="font-size: 13px; color: var(--text-secondary);"></span>
                 <input type="month" id="scan-month" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: var(--bg);">
                 <button class="btn btn-primary" id="scan-btn" onclick="triggerScan()">Run Scan</button>
+                <span style="font-size: 13px; color: var(--text-secondary);">{{ user.get('name', '') }}</span>
+                <a href="/auth/logout" style="font-size: 13px; color: var(--text-secondary);">Logout</a>
             </div>
         </header>
 
