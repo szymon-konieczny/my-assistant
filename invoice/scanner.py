@@ -2,7 +2,7 @@ import base64
 import logging
 import uuid
 from calendar import monthrange
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from config import settings
 from gmail.auth import get_credentials
@@ -78,7 +78,7 @@ def run_scan(
 
         db.update_scan_run(
             run_id,
-            completed_at="datetime('now')",
+            completed_at=datetime.now(timezone.utc).isoformat(),
             status="completed",
             invoices_found=total_found,
             invoices_polish_skipped=total_polish,
