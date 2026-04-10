@@ -137,8 +137,20 @@ async function triggerScan() {
     btn.textContent = 'Scanning...';
 
     try {
-        await fetch('/api/runs/trigger', { method: 'POST' });
-        showToast('Scan started! Refresh in a few minutes.');
+        const monthInput = document.getElementById('scan-month').value;
+        const body = {};
+        if (monthInput) {
+            const [year, month] = monthInput.split('-').map(Number);
+            const lastDay = new Date(year, month, 0).getDate();
+            body.after_date = `${year}-${String(month).padStart(2, '0')}-01`;
+            body.before_date = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+        }
+        await fetch('/api/runs/trigger', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        showToast(`Scan started for ${monthInput || 'previous month'}!`);
         pollForCompletion();
     } catch (e) {
         showToast('Error starting scan');
@@ -211,4 +223,12 @@ async function refreshAll() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', refreshAll);
+document.addEventListener('DOMContentLoaded', () => {
+    // Default scan month to previous month
+    const now = new Date();
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const y = prev.getFullYear();
+    const m = String(prev.getMonth() + 1).padStart(2, '0');
+    document.getElementById('scan-month').value = `${y}-${m}`;
+    refreshAll();
+});
