@@ -29,7 +29,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Invoice Assistant", lifespan=lifespan)
-app.add_middleware(SessionMiddleware, secret_key=settings.session_secret)
+
+app.mount("/static", StaticFiles(directory="dashboard/static"), name="static")
+app.include_router(auth_router)
+app.include_router(router)
 
 
 @app.middleware("http")
@@ -39,9 +42,8 @@ async def auth_middleware(request: Request, call_next):
     return await call_next(request)
 
 
-app.mount("/static", StaticFiles(directory="dashboard/static"), name="static")
-app.include_router(auth_router)
-app.include_router(router)
+# SessionMiddleware must be added LAST so it's the outermost layer
+app.add_middleware(SessionMiddleware, secret_key=settings.session_secret)
 
 if __name__ == "__main__":
     import uvicorn
