@@ -35,7 +35,9 @@ def save_invoice_pdf(
     Returns the R2 object key.
     """
     if sell_date and len(sell_date) >= 7:
-        month_dir = sell_date[:7]  # YYYY-MM
+        year = sell_date[:4]
+        month = sell_date[5:7]
+        month_dir = f"{year}/{month}"  # YYYY/MM
     else:
         month_dir = "unknown"
 
