@@ -217,41 +217,30 @@ def _create_accountant_draft(
     month_num = int(parts[1])
     month_name = POLISH_MONTHS.get(month_num, str(month_num))
 
-    subject = f"Faktury zagraniczne — {month_name} {year}"
+    subject = f"Dokumenty - {month_name} {year}"
 
-    # Build body
-    lines = [
-        "Dzień dobry,",
-        "",
-        f"W załączeniu przesyłam faktury zagraniczne za {month_name} {year}:",
-        "",
-    ]
+    body = (
+        f"Dzień dobry\n"
+        f"\n"
+        f"W załączeniu przesyłam dokumenty za {month_name}.\n"
+        f"\n"
+        f"Pozdrawiam serdecznie,\n"
+        f"Szymon Konieczny\n"
+        f"tel.: +48 731 905 527"
+    )
 
-    totals_by_currency: dict[str, float] = {}
+    # Prepare attachments (deduplicate by invoice number)
+    seen = set()
+    pdf_files = []
     for inv in invoices:
-        vendor = inv.get("vendor_name") or "—"
-        inv_num = inv.get("invoice_number") or "—"
-        amount = inv.get("amount")
-        currency = inv.get("currency") or "?"
-        amount_str = f"{amount:.2f}" if amount else "—"
-        lines.append(f"  - {vendor} — {inv_num} — {amount_str} {currency}")
-
-        if amount and currency:
-            totals_by_currency[currency] = totals_by_currency.get(currency, 0) + amount
-
-    lines.append("")
-    for cur, total in sorted(totals_by_currency.items()):
-        lines.append(f"Łączna kwota ({cur}): {total:.2f} {cur}")
-
-    lines.extend(["", "Pozdrawiam"])
-    body = "\n".join(lines)
-
-    # Prepare attachments
-    pdf_files = [
-        (inv.get("filename", "invoice.pdf"), inv["pdf_bytes"])
-        for inv in invoices
-        if "pdf_bytes" in inv
-    ]
+        if "pdf_bytes" not in inv:
+            continue
+        inv_num = inv.get("invoice_number")
+        if inv_num and inv_num in seen:
+            continue
+        if inv_num:
+            seen.add(inv_num)
+        pdf_files.append((inv.get("filename", "invoice.pdf"), inv["pdf_bytes"]))
 
     client.create_draft(
         to=settings.accounting_email,
