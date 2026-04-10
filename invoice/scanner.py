@@ -222,9 +222,7 @@ def _create_accountant_draft(
     body = (
         f"Dzień dobry\n"
         f"\n"
-        f"\n"
         f"W załączeniu przesyłam dokumenty za {month_name}.\n"
-        f"\n"
         f"\n"
         f"Pozdrawiam serdecznie,\n"
         f"Szymon Konieczny\n"
