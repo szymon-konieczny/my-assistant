@@ -35,8 +35,20 @@ class Settings:
     data_dir: str = field(
         default_factory=lambda: os.getenv("DATA_DIR", ".")
     )
-    invoice_storage_dir: str = field(
-        default_factory=lambda: os.getenv("INVOICE_STORAGE_DIR", "invoices")
+    r2_endpoint: str = field(
+        default_factory=lambda: os.getenv(
+            "R2_ENDPOINT",
+            "https://acc378042a01533021d28ba56de0761a.r2.cloudflarestorage.com",
+        )
+    )
+    r2_bucket: str = field(
+        default_factory=lambda: os.getenv("R2_BUCKET", "progrise-invoices")
+    )
+    r2_access_key_id: str = field(
+        default_factory=lambda: os.getenv("R2_ACCESS_KEY_ID", "")
+    )
+    r2_secret_access_key: str = field(
+        default_factory=lambda: os.getenv("R2_SECRET_ACCESS_KEY", "")
     )
     database_path: str = field(
         default_factory=lambda: os.getenv("DATABASE_PATH", "invoices.db")
