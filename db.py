@@ -86,6 +86,19 @@ def insert_invoice(
         conn.close()
 
 
+def invoice_number_exists(invoice_number: str) -> bool:
+    """Check if an invoice with this number already exists."""
+    if not invoice_number:
+        return False
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT 1 FROM invoices WHERE invoice_number = ? LIMIT 1",
+        (invoice_number,),
+    ).fetchone()
+    conn.close()
+    return row is not None
+
+
 def get_invoices(month: str | None = None, page: int = 1, per_page: int = 50) -> list[dict]:
     conn = get_connection()
     offset = (page - 1) * per_page

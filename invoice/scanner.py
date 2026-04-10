@@ -152,6 +152,11 @@ def _scan_account(
                     logger.info(f"  Skipping Polish invoice: {att['filename']}")
                     continue
 
+                # Deduplicate by invoice number (cross-account)
+                if data.invoice_number and db.invoice_number_exists(data.invoice_number):
+                    logger.info(f"  Skipping duplicate invoice: {data.invoice_number}")
+                    continue
+
                 # Save PDF
                 pdf_path = save_invoice_pdf(
                     pdf_bytes, data.sell_date, data.vendor_name, att["filename"]
