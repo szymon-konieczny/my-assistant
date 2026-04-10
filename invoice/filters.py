@@ -3,12 +3,13 @@ from models import ExtractedInvoiceData
 
 
 def is_polish_invoice(data: ExtractedInvoiceData) -> bool:
-    """Check if an invoice is Polish based on extracted data."""
-    if data.is_polish:
+    """Check if an invoice is from a Polish vendor (for KSeF exclusion).
+    Only excludes if the VENDOR is Polish, not just because the invoice
+    language is Polish (e.g. Apple Ireland sends Polish-language invoices).
+    """
+    if data.is_polish_vendor:
         return True
-    if data.language and data.language.lower() in ("polish", "pl", "polski"):
-        return True
-    if data.currency and data.currency.upper() == "PLN":
+    if data.vendor_country and data.vendor_country.upper() == "PL":
         return True
     return False
 

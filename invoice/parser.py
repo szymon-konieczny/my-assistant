@@ -16,18 +16,19 @@ Return ONLY a JSON object with these exact fields:
 
 {
   "vendor_name": "The company or person who issued the invoice",
+  "vendor_country": "Two-letter ISO country code of the vendor/issuer (based on their address or VAT number, e.g. PL, IE, US, DE)",
   "invoice_number": "The invoice number/ID",
   "sell_date": "The sell date (data sprzedaży) or service date in YYYY-MM-DD format. This is NOT the delivery date. If only an invoice date is present and no separate sell date, use the invoice date.",
   "amount": 1234.56,
   "currency": "Three-letter ISO currency code (e.g. EUR, USD, PLN, GBP, CZK)",
-  "is_polish": false,
+  "is_polish_vendor": false,
   "language": "detected language of the invoice"
 }
 
 Rules:
 - "amount" must be a number (not a string), representing the gross/total amount (brutto)
 - If multiple amounts exist, use the final total (gross/brutto)
-- Set "is_polish" to true if the invoice is in Polish, uses the word "faktura" or "faktury", contains a Polish NIP number, or is clearly issued by a Polish entity
+- "is_polish_vendor" should be true ONLY if the VENDOR/ISSUER is a Polish company (registered in Poland, has a Polish NIP without country prefix or with PL prefix, address in Poland). An invoice written in Polish or using the word "faktura" from a foreign company (e.g. Apple Ireland, Google Ireland) is NOT a Polish vendor.
 - "sell_date" should be the sell/service date, NOT the delivery or payment date
 - If a field cannot be determined, set it to null
 - Return ONLY the JSON object, no other text"""

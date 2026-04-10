@@ -135,8 +135,9 @@ def build_invoice_query(after_date: str, before_date: str) -> str:
     Dates should be in YYYY/MM/DD format.
     """
     subject_terms = (
-        "(subject:invoice OR subject:receipt "
-        "OR subject:Rechnung OR subject:facture OR subject:factura)"
+        "(subject:invoice OR subject:faktura OR subject:receipt "
+        "OR subject:Rechnung OR subject:facture OR subject:factura "
+        "OR from:payments-noreply@google.com)"
     )
     date_filter = f"after:{after_date} before:{before_date}"
     attachment_filter = "has:attachment filename:pdf"

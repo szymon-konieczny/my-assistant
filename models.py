@@ -4,11 +4,12 @@ from datetime import date, datetime
 
 class ExtractedInvoiceData(BaseModel):
     vendor_name: str | None = None
+    vendor_country: str | None = None  # ISO country code
     invoice_number: str | None = None
     sell_date: str | None = None  # YYYY-MM-DD
     amount: float | None = None
     currency: str | None = None
-    is_polish: bool = False
+    is_polish_vendor: bool = False
     language: str | None = None
 
 
