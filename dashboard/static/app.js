@@ -123,9 +123,10 @@ async function loadLastRun() {
     if (data.last_run) {
         const r = data.last_run;
         const statusClass = `status-${r.status}`;
+        const timestamp = formatTimestamp(r.completed_at || r.started_at);
         el.innerHTML = `
             <span class="status-badge ${statusClass}">${r.status}</span>
-            ${r.completed_at || r.started_at} &mdash;
+            ${timestamp} &mdash;
             ${r.invoices_found} found, ${r.invoices_polish_skipped} Polish skipped
         `;
 
@@ -219,6 +220,13 @@ function filterMonth(month) {
 
 function onMonthFilterChange(e) {
     filterMonth(e.target.value);
+}
+
+function formatTimestamp(ts) {
+    if (!ts) return '';
+    const d = new Date(ts.includes('T') || ts.includes('+') ? ts : ts + 'Z');
+    if (isNaN(d)) return ts;
+    return d.toLocaleString('sv-SE', { dateStyle: 'short', timeStyle: 'short' });
 }
 
 function formatAmount(num) {
