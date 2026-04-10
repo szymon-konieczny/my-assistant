@@ -1,0 +1,10 @@
+.env
+credentials.json
+tokens/
+token.json
+invoices.db
+invoices/
+__pycache__/
+*.pyc
+.venv/
+venv/

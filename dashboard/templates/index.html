@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Assistant</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Invoice Assistant</h1>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span id="last-run-info" style="font-size: 13px; color: var(--text-secondary);"></span>
+                <button class="btn btn-primary" id="scan-btn" onclick="triggerScan()">Run Scan</button>
+            </div>
+        </header>
+
+        <div class="section" id="accounts-section">
+            <div class="section-header">
+                <h2>Gmail Accounts</h2>
+            </div>
+            <div id="accounts-list" style="padding: 16px 20px;">
+                Loading...
+            </div>
+        </div>
+
+        <div class="cards" id="grand-totals">
+            <div class="card">
+                <div class="label">Total</div>
+                <div class="value">-</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2>Monthly Totals</h2>
+            </div>
+            <div id="monthly-totals">
+                <div class="empty">No data yet</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2>Invoices</h2>
+                <div class="filters">
+                    <select id="month-filter" onchange="onMonthFilterChange(event)">
+                        <option value="">All months</option>
+                    </select>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Vendor</th>
+                        <th>Invoice #</th>
+                        <th>Sell Date</th>
+                        <th>Amount</th>
+                        <th>Currency</th>
+                        <th>From</th>
+                        <th>Account</th>
+                    </tr>
+                </thead>
+                <tbody id="invoice-table-body">
+                    <tr><td colspan="7" class="empty">No invoices found</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <script src="/static/app.js"></script>
+</body>
+</html>
