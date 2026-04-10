@@ -32,6 +32,9 @@ class Settings:
             for s in os.getenv("EXCLUDED_SENDERS", "biuro@silesia-tax.pl").split(",")
         ]
     )
+    data_dir: str = field(
+        default_factory=lambda: os.getenv("DATA_DIR", ".")
+    )
     invoice_storage_dir: str = field(
         default_factory=lambda: os.getenv("INVOICE_STORAGE_DIR", "invoices")
     )
@@ -69,6 +72,7 @@ class Settings:
             "szykon": "szykon@gmail.com",
             "progrise": "simon@progrise.dev",
         }
+        data_dir = os.getenv("DATA_DIR", ".")
         accounts = []
         for alias in raw.split(","):
             alias = alias.strip()
@@ -76,7 +80,7 @@ class Settings:
                 GmailAccount(
                     alias=alias,
                     email=email_map.get(alias, f"{alias}@gmail.com"),
-                    token_path=f"tokens/{alias}.json",
+                    token_path=os.path.join(data_dir, "tokens", f"{alias}.json"),
                 )
             )
         return accounts
