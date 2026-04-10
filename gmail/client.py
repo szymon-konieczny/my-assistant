@@ -140,7 +140,7 @@ def build_invoice_query(after_date: str, before_date: str) -> str:
         "OR from:payments-noreply@google.com)"
     )
     date_filter = f"after:{after_date} before:{before_date}"
-    attachment_filter = "has:attachment filename:pdf"
+    attachment_filter = "has:attachment"
     exclusion = "-from:biuro@silesia-tax.pl"
 
     return f"{subject_terms} {date_filter} {attachment_filter} {exclusion}"
