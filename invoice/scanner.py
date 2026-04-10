@@ -1,5 +1,6 @@
 import base64
 import logging
+import threading
 import uuid
 from calendar import monthrange
 from datetime import date, datetime, timedelta, timezone
@@ -13,6 +14,9 @@ from invoice.storage import save_invoice_pdf
 import db
 
 logger = logging.getLogger(__name__)
+
+_cancel_event: threading.Event | None = None
+_current_run_id: str | None = None
 
 POLISH_MONTHS = {
     1: "styczeń", 2: "luty", 3: "marzec", 4: "kwiecień",
@@ -30,6 +34,21 @@ def get_previous_month_range() -> tuple[str, str]:
     return first_of_prev.isoformat(), last_of_prev.isoformat()
 
 
+def cancel_scan():
+    """Cancel the currently running scan."""
+    global _cancel_event, _current_run_id
+    if _cancel_event and _current_run_id:
+        logger.info(f"Cancelling scan {_current_run_id}")
+        _cancel_event.set()
+        db.update_scan_run(
+            _current_run_id,
+            completed_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+            status="cancelled",
+        )
+        return True
+    return False
+
+
 def run_scan(
     after_date: str | None = None,
     before_date: str | None = None,
@@ -37,10 +56,14 @@ def run_scan(
     """Run a full invoice scan across all Gmail accounts.
     Returns the scan run ID.
     """
+    global _cancel_event, _current_run_id
+
     if not after_date or not before_date:
         after_date, before_date = get_previous_month_range()
 
     run_id = str(uuid.uuid4())[:8]
+    _cancel_event = threading.Event()
+    _current_run_id = run_id
     db.create_scan_run(run_id, after_date, before_date)
     logger.info(f"Scan {run_id}: scanning {after_date} to {before_date}")
 
@@ -50,6 +73,10 @@ def run_scan(
 
     try:
         for account in settings.gmail_accounts:
+            if _cancel_event.is_set():
+                logger.info(f"Scan {run_id}: cancelled")
+                break
+
             logger.info(f"Scan {run_id}: checking account {account.email}")
             try:
                 creds = get_credentials(account)
@@ -58,13 +85,18 @@ def run_scan(
                     continue
                 client = GmailClient(creds)
                 found, polish, invoices = _scan_account(
-                    client, account.alias, after_date, before_date, run_id
+                    client, account.alias, after_date, before_date, run_id,
+                    _cancel_event,
                 )
                 total_found += found
                 total_polish += polish
                 collected_invoices.extend(invoices)
             except Exception as e:
                 logger.error(f"Error scanning {account.email}: {e}")
+
+        if _cancel_event.is_set():
+            # Status already updated by cancel_scan()
+            return run_id
 
         # Create draft to accountant if we have non-Polish invoices
         draft_created = False
@@ -78,7 +110,7 @@ def run_scan(
 
         db.update_scan_run(
             run_id,
-            completed_at=datetime.now(timezone.utc).isoformat(),
+            completed_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
             status="completed",
             invoices_found=total_found,
             invoices_polish_skipped=total_polish,
@@ -97,6 +129,9 @@ def run_scan(
             invoices_found=total_found,
             invoices_polish_skipped=total_polish,
         )
+    finally:
+        _cancel_event = None
+        _current_run_id = None
 
     return run_id
 
@@ -107,6 +142,7 @@ def _scan_account(
     after_date: str,
     before_date: str,
     run_id: str,
+    cancel_event: threading.Event,
 ) -> tuple[int, int, list[dict]]:
     """Scan a single Gmail account. Returns (found, polish_skipped, invoice_list)."""
     # Gmail query dates use YYYY/MM/DD format
@@ -122,6 +158,8 @@ def _scan_account(
     invoices = []
 
     for msg_ref in messages:
+        if cancel_event.is_set():
+            break
         message = client.get_message(msg_ref["id"])
         sender = client.get_sender_email(message)
 

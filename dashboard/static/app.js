@@ -117,6 +117,8 @@ async function loadInvoices(month = '') {
 async function loadLastRun() {
     const data = await fetchJSON('/api/status');
     const el = document.getElementById('last-run-info');
+    const scanBtn = document.getElementById('scan-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
 
     if (data.last_run) {
         const r = data.last_run;
@@ -126,15 +128,28 @@ async function loadLastRun() {
             ${r.completed_at || r.started_at} &mdash;
             ${r.invoices_found} found, ${r.invoices_polish_skipped} Polish skipped
         `;
+
+        if (r.status === 'running') {
+            scanBtn.disabled = true;
+            scanBtn.textContent = 'Scanning...';
+            cancelBtn.style.display = '';
+        } else {
+            scanBtn.disabled = false;
+            scanBtn.textContent = 'Run Scan';
+            cancelBtn.style.display = 'none';
+        }
     } else {
         el.textContent = 'No scans yet';
+        cancelBtn.style.display = 'none';
     }
 }
 
 async function triggerScan() {
     const btn = document.getElementById('scan-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
     btn.disabled = true;
     btn.textContent = 'Scanning...';
+    cancelBtn.style.display = '';
 
     try {
         const monthInput = document.getElementById('scan-month').value;
@@ -154,9 +169,26 @@ async function triggerScan() {
         pollForCompletion();
     } catch (e) {
         showToast('Error starting scan');
-    } finally {
         btn.disabled = false;
         btn.textContent = 'Run Scan';
+        cancelBtn.style.display = 'none';
+    }
+}
+
+async function cancelScan() {
+    const cancelBtn = document.getElementById('cancel-btn');
+    cancelBtn.disabled = true;
+    cancelBtn.textContent = 'Cancelling...';
+
+    try {
+        await fetch('/api/runs/cancel', { method: 'POST' });
+        showToast('Scan cancelled');
+        await loadLastRun();
+    } catch (e) {
+        showToast('Error cancelling scan');
+    } finally {
+        cancelBtn.disabled = false;
+        cancelBtn.textContent = 'Cancel';
     }
 }
 
@@ -169,7 +201,11 @@ async function pollForCompletion() {
         if (data.last_run && data.last_run.status !== 'running') {
             clearInterval(poll);
             await refreshAll();
-            showToast(`Scan completed: ${data.last_run.invoices_found} invoices found`);
+            if (data.last_run.status === 'cancelled') {
+                showToast('Scan was cancelled');
+            } else {
+                showToast(`Scan completed: ${data.last_run.invoices_found} invoices found`);
+            }
         }
         if (attempts > 120) clearInterval(poll);
     }, 5000);

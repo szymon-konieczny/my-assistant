@@ -6,7 +6,7 @@ from fastapi.templating import Jinja2Templates
 import db
 from config import settings
 from models import TriggerRequest, TriggerResponse
-from invoice.scanner import run_scan
+from invoice.scanner import run_scan, cancel_scan
 from gmail.auth import get_auth_url, handle_oauth_callback, is_account_connected
 
 router = APIRouter()
@@ -103,6 +103,12 @@ async def trigger_scan(body: TriggerRequest | None = None):
         status="started",
         message="Scan started in background. Check /api/runs for status.",
     )
+
+
+@router.post("/api/runs/cancel")
+async def cancel_running_scan():
+    cancelled = cancel_scan()
+    return {"cancelled": cancelled}
 
 
 @router.get("/api/status")
