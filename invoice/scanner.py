@@ -146,8 +146,11 @@ def _scan_account(
 ) -> tuple[int, int, list[dict]]:
     """Scan a single Gmail account. Returns (found, polish_skipped, invoice_list)."""
     # Gmail query dates use YYYY/MM/DD format
+    # Extend search window by 10 days to catch invoices sent in early next month
+    # (e.g. Google Payments sends March invoice on ~April 2)
     gmail_after = after_date.replace("-", "/")
-    gmail_before = before_date.replace("-", "/")
+    extended_before = date.fromisoformat(before_date) + timedelta(days=10)
+    gmail_before = extended_before.isoformat().replace("-", "/")
     query = build_invoice_query(gmail_after, gmail_before)
 
     messages = client.search_messages(query)
