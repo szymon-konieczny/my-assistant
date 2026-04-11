@@ -170,7 +170,7 @@ function closeSummary(event) {
     document.getElementById('summary-modal').style.display = 'none';
 }
 
-function openDrawer(index) {
+async function openDrawer(index) {
     const a = window._articles[index];
     if (!a) return;
 
@@ -178,10 +178,26 @@ function openDrawer(index) {
     document.getElementById('drawer-meta').innerHTML =
         `<span>${esc(a.source_name || '')}</span><span>${formatDate(a.published_at)}</span>` +
         (a.source_url ? `<a href="${esc(a.source_url)}" target="_blank" rel="noopener">Open article</a>` : '');
-    document.getElementById('drawer-body').textContent = a.summary || 'No summary available.';
 
+    const body = document.getElementById('drawer-body');
     document.getElementById('article-drawer').classList.add('open');
     document.getElementById('drawer-backdrop').classList.add('open');
+
+    // Show RSS summary while loading detail
+    body.innerHTML = `<p>${esc(a.summary || '')}</p><p style="color:var(--text-secondary);margin-top:12px">Loading full summary...</p>`;
+
+    // Fetch extended summary (generated on first access, cached after)
+    const data = await fetchJSON(`/api/news/${a.id}/detail`);
+    const detail = data.article;
+    if (detail && detail.extended_summary) {
+        body.innerHTML = detail.extended_summary
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\n\n/g, '</p><p>')
+            .replace(/^/, '<p>').replace(/$/, '</p>');
+    } else {
+        body.innerHTML = `<p>${esc(a.summary || 'No summary available.')}</p>`;
+    }
 }
 
 function closeDrawer() {

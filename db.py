@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS news_articles (
     category_id INTEGER,
     title TEXT NOT NULL,
     summary TEXT,
+    extended_summary TEXT,
     source_url TEXT,
     source_name TEXT,
     published_at TEXT,
@@ -104,6 +105,11 @@ def init_db():
     cols = [row[1] for row in conn.execute("PRAGMA table_info(invoices)").fetchall()]
     if "is_ksef" not in cols:
         conn.execute("ALTER TABLE invoices ADD COLUMN is_ksef BOOLEAN DEFAULT 0")
+        conn.commit()
+    # Migrate: add extended_summary column if missing
+    news_cols = [row[1] for row in conn.execute("PRAGMA table_info(news_articles)").fetchall()]
+    if "extended_summary" not in news_cols:
+        conn.execute("ALTER TABLE news_articles ADD COLUMN extended_summary TEXT")
         conn.commit()
     # Seed default news categories and feeds
     existing = conn.execute("SELECT COUNT(*) FROM news_categories").fetchone()[0]
@@ -371,6 +377,23 @@ def insert_news_article(
         return inserted
     finally:
         conn.close()
+
+
+def get_news_article(article_id: int) -> dict | None:
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM news_articles WHERE id = ?", (article_id,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def update_news_article_summary(article_id: int, extended_summary: str):
+    conn = get_connection()
+    conn.execute(
+        "UPDATE news_articles SET extended_summary = ? WHERE id = ?",
+        (extended_summary, article_id),
+    )
+    conn.commit()
+    conn.close()
 
 
 def get_news_articles(category_id: int | None = None, limit: int = 50) -> list[dict]:

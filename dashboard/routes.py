@@ -139,6 +139,53 @@ async def remove_news_category(category_id: int):
     return {"deleted": True}
 
 
+@router.get("/api/news/{article_id}/detail")
+async def get_article_detail(article_id: int):
+    """Get article with extended summary, generating it on first access."""
+    article = db.get_news_article(article_id)
+    if not article:
+        return {"error": "Article not found"}
+
+    if article.get("extended_summary"):
+        return {"article": article}
+
+    # Generate extended summary from the source page
+    if not article.get("source_url"):
+        return {"article": article}
+
+    import anthropic
+    import requests as http_requests
+    try:
+        resp = http_requests.get(article["source_url"], timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+        resp.raise_for_status()
+        # Extract text roughly — strip HTML tags
+        import re
+        text = re.sub(r"<script[^>]*>.*?</script>", "", resp.text, flags=re.DOTALL)
+        text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL)
+        text = re.sub(r"<[^>]+>", " ", text)
+        text = re.sub(r"\s+", " ", text).strip()[:5000]
+
+        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        response = client.messages.create(
+            model=settings.claude_model,
+            max_tokens=1024,
+            messages=[{"role": "user", "content": (
+                f"Article title: {article['title']}\n"
+                f"Source: {article['source_name']}\n\n"
+                f"Page content:\n{text}\n\n"
+                "Write a comprehensive 3-5 paragraph summary of this article. "
+                "Cover the key facts, context, and why it matters. Be informative and concise."
+            )}],
+        )
+        extended = response.content[0].text
+        db.update_news_article_summary(article_id, extended)
+        article["extended_summary"] = extended
+    except Exception as e:
+        logger.error(f"Article detail generation failed: {e}")
+
+    return {"article": article}
+
+
 @router.post("/api/news/fetch")
 async def trigger_news_fetch():
     thread = threading.Thread(target=fetch_all_feeds, daemon=True)
