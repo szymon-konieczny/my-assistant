@@ -376,3 +376,31 @@ tr:hover td { background: var(--bg); }
     color: var(--text-secondary);
     line-height: 1.5;
 }
+
+/* --- Digest --- */
+
+.digest-item {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.digest-item:last-child { border-bottom: none; }
+
+.digest-item-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.digest-item-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.digest-item-summary {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.5;
+}

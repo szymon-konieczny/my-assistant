@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Email Digest — Progrise{% endblock %}
+
+{% block content %}
+    <header>
+        <div class="header-top">
+            <h1>Email Digest</h1>
+            <div class="header-actions">
+                <input type="date" id="digest-date" onchange="onDateChange()">
+                <button class="btn btn-primary" onclick="generateNow()">Generate Now</button>
+            </div>
+        </div>
+    </header>
+
+    <div id="digest-content">
+        <div class="empty">Loading...</div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="/static/digest.js"></script>
+{% endblock %}

@@ -35,6 +35,16 @@ CREATE TABLE IF NOT EXISTS scan_runs (
     date_range_end TEXT
 );
 
+CREATE TABLE IF NOT EXISTS email_digests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gmail_account TEXT NOT NULL,
+    digest_date TEXT NOT NULL,
+    content TEXT NOT NULL,
+    email_count INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(gmail_account, digest_date)
+);
+
 CREATE TABLE IF NOT EXISTS news_categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
@@ -378,3 +388,40 @@ def get_news_articles(category_id: int | None = None, limit: int = 50) -> list[d
         ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+# --- Email Digests ---
+
+def save_digest(gmail_account: str, digest_date: str, content: str, email_count: int) -> bool:
+    conn = get_connection()
+    try:
+        conn.execute(
+            """INSERT OR REPLACE INTO email_digests
+            (gmail_account, digest_date, content, email_count)
+            VALUES (?, ?, ?, ?)""",
+            (gmail_account, digest_date, content, email_count),
+        )
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+
+def get_digest(digest_date: str) -> dict | None:
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT * FROM email_digests WHERE digest_date = ? ORDER BY created_at DESC LIMIT 1",
+        (digest_date,),
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def get_digest_dates(limit: int = 30) -> list[str]:
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT DISTINCT digest_date FROM email_digests ORDER BY digest_date DESC LIMIT ?",
+        (limit,),
+    ).fetchall()
+    conn.close()
+    return [r["digest_date"] for r in rows]

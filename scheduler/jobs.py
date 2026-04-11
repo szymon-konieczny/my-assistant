@@ -5,6 +5,7 @@ from apscheduler.triggers.cron import CronTrigger
 from config import settings
 from invoice.scanner import run_scan
 from news.fetcher import fetch_all_feeds
+from digest.engine import generate_digest
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,12 @@ def scheduled_news_fetch():
     """Daily news fetch job."""
     logger.info("Scheduled news fetch triggered")
     fetch_all_feeds()
+
+
+def scheduled_digest():
+    """Daily email digest job."""
+    logger.info("Scheduled email digest triggered")
+    generate_digest()
 
 
 def setup_scheduler():
@@ -47,3 +54,11 @@ def setup_scheduler():
         replace_existing=True,
     )
     logger.info("Scheduled daily news fetch: 08:00")
+
+    scheduler.add_job(
+        scheduled_digest,
+        CronTrigger(hour=8, minute=5),
+        id="daily_email_digest",
+        replace_existing=True,
+    )
+    logger.info("Scheduled daily email digest: 08:05")

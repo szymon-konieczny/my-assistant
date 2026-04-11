@@ -14,6 +14,7 @@ from invoice.scanner import run_scan, cancel_scan
 from gmail.auth import get_auth_url, handle_oauth_callback, is_account_connected
 from ksef.client import query_invoices as ksef_query_invoices, KsefRateLimitError
 from news.fetcher import fetch_all_feeds
+from digest.engine import generate_digest
 
 logger = logging.getLogger(__name__)
 
@@ -141,6 +142,31 @@ async def remove_news_category(category_id: int):
 @router.post("/api/news/fetch")
 async def trigger_news_fetch():
     thread = threading.Thread(target=fetch_all_feeds, daemon=True)
+    thread.start()
+    return {"status": "started"}
+
+
+# --- Email Digest ---
+
+@router.get("/digest", response_class=HTMLResponse)
+async def digest_page(request: Request):
+    user = request.session.get("user", {})
+    return templates.TemplateResponse("digest.html", {"request": request, "user": user, "active_page": "digest"})
+
+
+@router.get("/api/digest")
+async def get_digest_api(date: str | None = None):
+    if not date:
+        from datetime import date as dt_date, timedelta
+        date = (dt_date.today() - timedelta(days=1)).isoformat()
+    digest = db.get_digest(date)
+    dates = db.get_digest_dates()
+    return {"digest": digest, "available_dates": dates, "requested_date": date}
+
+
+@router.post("/api/digest/generate")
+async def trigger_digest(date: str | None = None):
+    thread = threading.Thread(target=generate_digest, kwargs={"target_date": date}, daemon=True)
     thread.start()
     return {"status": "started"}
 

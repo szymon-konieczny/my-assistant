@@ -85,6 +85,25 @@ class GmailClient:
         for sub_part in part.get("parts", []):
             self._collect_pdf_parts(sub_part, message_id, result)
 
+    def get_body_text(self, message: dict) -> str:
+        """Extract plain text body from a message's MIME structure."""
+        payload = message.get("payload", {})
+        parts = []
+        self._collect_text_parts(payload, parts)
+        return "\n".join(parts).strip()
+
+    def _collect_text_parts(self, part: dict, result: list):
+        """Recursively find text/plain parts in MIME structure."""
+        mime_type = part.get("mimeType", "")
+        body = part.get("body", {})
+
+        if mime_type == "text/plain" and body.get("data"):
+            decoded = base64.urlsafe_b64decode(body["data"]).decode("utf-8", errors="replace")
+            result.append(decoded)
+
+        for sub_part in part.get("parts", []):
+            self._collect_text_parts(sub_part, result)
+
     def download_attachment(self, message_id: str, attachment_id: str) -> bytes:
         """Download an attachment by ID and return raw bytes."""
         response = (
