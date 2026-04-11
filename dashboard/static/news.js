@@ -142,6 +142,7 @@ async function selectArticle(index) {
     });
 
     const panel = document.getElementById('detail-panel');
+    const hasSummary = a.summary && a.summary.length > 10;
     panel.innerHTML = `
         <div class="detail-header">
             <h3>${esc(a.title)}</h3>
@@ -152,24 +153,29 @@ async function selectArticle(index) {
             ${a.source_url ? `<a href="${esc(a.source_url)}" target="_blank" rel="noopener">Open article</a>` : ''}
         </div>
         <div class="detail-body">
-            <p style="color:var(--text-secondary)">Loading summary...</p>
+            ${hasSummary ? `<p>${esc(a.summary)}</p>` : ''}
+            <p style="color:var(--text-secondary)">Generating detailed summary...</p>
         </div>
     `;
 
-    // Fetch extended summary
-    const data = await fetchJSON(`/api/news/${a.id}/detail`);
-    const detail = data.article;
+    // Fetch extended summary (cached after first generation)
+    try {
+        const data = await fetchJSON(`/api/news/${a.id}/detail`);
+        if (selectedIndex !== index) return;
 
-    // Only update if this article is still selected
-    if (selectedIndex !== index) return;
-
-    const body = panel.querySelector('.detail-body');
-    if (detail && detail.extended_summary) {
-        body.innerHTML = renderMarkdown(detail.extended_summary);
-    } else if (a.summary) {
-        body.innerHTML = `<p>${esc(a.summary)}</p>`;
-    } else {
-        body.innerHTML = '<p style="color:var(--text-secondary)">No summary available.</p>';
+        const body = panel.querySelector('.detail-body');
+        const detail = data.article;
+        if (detail && detail.extended_summary) {
+            body.innerHTML = renderMarkdown(detail.extended_summary);
+        } else if (hasSummary) {
+            body.innerHTML = `<p>${esc(a.summary)}</p>`;
+        } else {
+            body.innerHTML = '<p style="color:var(--text-secondary)">Could not generate summary for this article.</p>';
+        }
+    } catch (e) {
+        if (selectedIndex !== index) return;
+        panel.querySelector('.detail-body').innerHTML =
+            hasSummary ? `<p>${esc(a.summary)}</p>` : '<p style="color:var(--text-secondary)">Failed to load summary.</p>';
     }
 }
 

@@ -95,8 +95,7 @@ DEFAULT_NEWS_FEEDS = {
         ("Hacker News", "https://hnrss.org/frontpage"),
     ],
     "Claude Code": [
-        ("Anthropic News", "https://www.anthropic.com/rss.xml"),
-        ("Claude Code Releases", "https://github.com/anthropics/claude-code/releases.atom"),
+        ("Anthropic Research", "https://www.anthropic.com/rss.xml"),
         ("Anthropic Engineering", "https://www.anthropic.com/engineering/rss.xml"),
     ],
 }
@@ -116,6 +115,9 @@ def init_db():
     if "extended_summary" not in news_cols:
         conn.execute("ALTER TABLE news_articles ADD COLUMN extended_summary TEXT")
         conn.commit()
+    # Migrate: remove GitHub releases changelog feed (noise)
+    conn.execute("DELETE FROM news_feeds WHERE feed_url LIKE '%/releases.atom'")
+    conn.commit()
     # Seed default news categories and feeds (including new ones)
     for cat_name, feeds in DEFAULT_NEWS_FEEDS.items():
         exists = conn.execute(
