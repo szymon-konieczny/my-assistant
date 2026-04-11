@@ -132,12 +132,17 @@ header {
     color: var(--text-secondary);
 }
 
-.header-actions input[type="month"] {
+.header-actions input[type="month"],
+.header-actions input[type="date"] {
     padding: 6px 12px;
     border: 1px solid var(--border);
     border-radius: 6px;
     font-size: 14px;
     background: var(--bg);
+    font-family: inherit;
+    color: var(--text);
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 .btn-danger {

@@ -396,19 +396,21 @@ def update_news_article_summary(article_id: int, extended_summary: str):
     conn.close()
 
 
-def get_news_articles(category_id: int | None = None, limit: int = 50) -> list[dict]:
+def get_news_articles(category_id: int | None = None, date: str | None = None, limit: int = 50) -> list[dict]:
     conn = get_connection()
+    where = []
+    params: list = []
     if category_id:
-        rows = conn.execute(
-            """SELECT * FROM news_articles WHERE category_id = ?
-            ORDER BY published_at DESC LIMIT ?""",
-            (category_id, limit),
-        ).fetchall()
-    else:
-        rows = conn.execute(
-            "SELECT * FROM news_articles ORDER BY published_at DESC LIMIT ?",
-            (limit,),
-        ).fetchall()
+        where.append("category_id = ?")
+        params.append(category_id)
+    if date:
+        where.append("published_at >= ? AND published_at < date(?, '+1 day')")
+        params.extend([date, date])
+    clause = ("WHERE " + " AND ".join(where)) if where else ""
+    rows = conn.execute(
+        f"SELECT * FROM news_articles {clause} ORDER BY published_at DESC LIMIT ?",
+        params + [limit],
+    ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
