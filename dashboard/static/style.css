@@ -408,8 +408,19 @@ tr:hover td { background: var(--bg); }
     border-radius: var(--radius);
     position: sticky;
     top: 0;
-    max-height: calc(100vh - 48px);
+    max-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.detail-body {
+    padding: 20px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text);
     overflow-y: auto;
+    flex: 1;
+    min-height: 0;
 }
 
 .detail-header {
@@ -439,13 +450,6 @@ tr:hover td { background: var(--bg); }
     margin-left: auto;
 }
 .detail-meta a:hover { text-decoration: underline; }
-
-.detail-body {
-    padding: 20px;
-    font-size: 14px;
-    line-height: 1.7;
-    color: var(--text);
-}
 
 .detail-body p { margin-bottom: 12px; }
 .detail-body p:last-child { margin-bottom: 0; }
@@ -664,4 +668,68 @@ tr:hover td { background: var(--bg); }
     color: var(--text-secondary);
     font-size: 13px;
     padding: 20px;
+}
+
+/* --- Responsive --- */
+
+@media (max-width: 768px) {
+    .portal { flex-direction: column; }
+
+    .sidebar {
+        width: 100%;
+        min-width: 100%;
+        height: auto;
+        flex-direction: row;
+        padding: 8px 0;
+        overflow-x: auto;
+    }
+
+    .sidebar-brand { padding: 0 16px 0; font-size: 16px; display: flex; align-items: center; }
+
+    .sidebar-nav {
+        flex-direction: row;
+        gap: 0;
+        padding: 0 8px;
+        flex-wrap: nowrap;
+    }
+
+    .sidebar-link {
+        white-space: nowrap;
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    .sidebar-link svg { display: none; }
+
+    .sidebar-footer { display: none; }
+
+    .main-content {
+        padding: 16px;
+        height: auto;
+        overflow-y: visible;
+        max-width: 100%;
+    }
+
+    body { height: auto; overflow: auto; }
+
+    .header-top { flex-direction: column; gap: 8px; align-items: flex-start; }
+    .header-actions { flex-wrap: wrap; width: 100%; }
+
+    .news-split { flex-direction: column; }
+    .news-detail { width: 100%; min-width: 100%; position: static; max-height: none; }
+
+    .kanban-board { flex-direction: column; }
+    .kanban-column { min-height: 100px; }
+
+    table { font-size: 13px; }
+    th, td { padding: 8px 12px; }
+
+    .tab-bar { flex-wrap: wrap; }
+    .tab { padding: 6px 14px; font-size: 13px; }
+
+    .cards { grid-template-columns: 1fr; }
+    .monthly-totals { grid-template-columns: 1fr 1fr; }
+
+    .modal { max-width: 95vw; }
+    .modal-body { max-height: 60vh; }
 }

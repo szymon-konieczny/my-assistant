@@ -15,6 +15,7 @@ from gmail.auth import get_auth_url, handle_oauth_callback, is_account_connected
 from ksef.client import query_invoices as ksef_query_invoices, KsefRateLimitError
 from news.fetcher import fetch_all_feeds
 from digest.engine import generate_digest
+from subscriptions.scanner import scan_newsletters
 
 logger = logging.getLogger(__name__)
 
@@ -317,6 +318,83 @@ async def update_task_api(task_id: int, body: TaskUpdate):
 @router.delete("/api/tasks/{task_id}")
 async def remove_task(task_id: int):
     db.delete_task(task_id)
+    return {"deleted": True}
+
+
+# --- Subscriptions ---
+
+@router.get("/subscriptions", response_class=HTMLResponse)
+async def subscriptions_page(request: Request):
+    user = request.session.get("user", {})
+    return templates.TemplateResponse("subscriptions.html", {"request": request, "user": user, "active_page": "subscriptions"})
+
+
+@router.get("/api/subscriptions/newsletters")
+async def list_newsletters():
+    return {"newsletters": db.get_newsletters()}
+
+
+@router.post("/api/subscriptions/newsletters/scan")
+async def trigger_newsletter_scan():
+    thread = threading.Thread(target=scan_newsletters, daemon=True)
+    thread.start()
+    return {"status": "started"}
+
+
+class NewsletterUpdate(BaseModel):
+    hidden: bool | None = None
+
+
+@router.put("/api/subscriptions/newsletters/{newsletter_id}")
+async def update_newsletter_api(newsletter_id: int, body: NewsletterUpdate):
+    updates = {k: v for k, v in body.model_dump().items() if v is not None}
+    if updates:
+        db.update_newsletter(newsletter_id, **updates)
+    return {"updated": True}
+
+
+@router.get("/api/subscriptions/services")
+async def list_services():
+    return {"services": db.get_service_subs()}
+
+
+class ServiceRequest(BaseModel):
+    name: str
+    cost: float | None = None
+    currency: str = "PLN"
+    billing_cycle: str = "monthly"
+    renewal_date: str | None = None
+    url: str | None = None
+    notes: str | None = None
+
+
+@router.post("/api/subscriptions/services")
+async def create_service(body: ServiceRequest):
+    sub_id = db.add_service_sub(body.name, body.cost, body.currency, body.billing_cycle, body.renewal_date, body.url, body.notes)
+    return {"id": sub_id}
+
+
+class ServiceUpdate(BaseModel):
+    name: str | None = None
+    cost: float | None = None
+    currency: str | None = None
+    billing_cycle: str | None = None
+    renewal_date: str | None = None
+    url: str | None = None
+    notes: str | None = None
+
+
+@router.put("/api/subscriptions/services/{sub_id}")
+async def update_service_api(sub_id: int, body: ServiceUpdate):
+    updates = {k: v for k, v in body.model_dump().items() if v is not None}
+    if updates:
+        db.update_service_sub(sub_id, **updates)
+    return {"updated": True}
+
+
+@router.delete("/api/subscriptions/services/{sub_id}")
+async def remove_service(sub_id: int):
+    db.delete_service_sub(sub_id)
     return {"deleted": True}
 
 

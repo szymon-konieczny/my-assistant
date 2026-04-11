@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Subscriptions — Progrise{% endblock %}
+
+{% block content %}
+    <header>
+        <div class="header-top">
+            <h1>Subscriptions</h1>
+        </div>
+    </header>
+
+    <div class="tab-bar">
+        <button class="tab active" data-view="newsletters" onclick="switchSubView('newsletters')">Newsletters</button>
+        <button class="tab" data-view="services" onclick="switchSubView('services')">Services</button>
+    </div>
+
+    <div id="newsletters-view">
+        <div style="margin-bottom:16px">
+            <button class="btn btn-primary" onclick="scanNewsletters()">Scan Gmail</button>
+        </div>
+        <div class="section">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Sender</th>
+                        <th>Emails</th>
+                        <th>Last Seen</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="newsletter-body">
+                    <tr><td colspan="4" class="empty">Click "Scan Gmail" to detect newsletters</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="services-view" style="display:none">
+        <div id="service-total" style="margin-bottom:16px"></div>
+        <div class="section">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Service</th>
+                        <th>Cost</th>
+                        <th>Cycle</th>
+                        <th>Renewal</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="service-body">
+                    <tr><td colspan="5" class="empty">No services added</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="section" style="margin-top:16px">
+            <div class="section-header"><h2>Add Service</h2></div>
+            <div style="padding:16px 20px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                <input type="text" id="svc-name" placeholder="Service name" style="padding:6px 12px; border:1px solid var(--border); border-radius:6px; font-size:14px; flex:1; min-width:150px;">
+                <input type="number" id="svc-cost" placeholder="Cost" step="0.01" style="padding:6px 12px; border:1px solid var(--border); border-radius:6px; font-size:14px; width:100px;">
+                <select id="svc-currency" style="padding:6px 12px; border:1px solid var(--border); border-radius:6px; font-size:14px;">
+                    <option>PLN</option><option>EUR</option><option>USD</option>
+                </select>
+                <select id="svc-cycle" style="padding:6px 12px; border:1px solid var(--border); border-radius:6px; font-size:14px;">
+                    <option value="monthly">Monthly</option><option value="yearly">Yearly</option>
+                </select>
+                <input type="date" id="svc-renewal" style="padding:6px 12px; border:1px solid var(--border); border-radius:6px; font-size:14px;">
+                <input type="url" id="svc-url" placeholder="URL" style="padding:6px 12px; border:1px solid var(--border); border-radius:6px; font-size:14px; flex:1; min-width:150px;">
+                <button class="btn btn-primary" onclick="addService()">Add</button>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="/static/subscriptions.js"></script>
+{% endblock %}

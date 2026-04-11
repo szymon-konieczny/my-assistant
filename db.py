@@ -45,6 +45,28 @@ CREATE TABLE IF NOT EXISTS email_digests (
     UNIQUE(gmail_account, digest_date)
 );
 
+CREATE TABLE IF NOT EXISTS newsletter_subs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sender_email TEXT NOT NULL UNIQUE,
+    sender_name TEXT,
+    unsubscribe_url TEXT,
+    email_count INTEGER DEFAULT 1,
+    last_seen TEXT,
+    hidden BOOLEAN DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS service_subs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    cost REAL,
+    currency TEXT DEFAULT 'PLN',
+    billing_cycle TEXT DEFAULT 'monthly',
+    renewal_date TEXT,
+    url TEXT,
+    notes TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS projects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -564,5 +586,90 @@ def update_task(task_id: int, **kwargs) -> bool:
 def delete_task(task_id: int):
     conn = get_connection()
     conn.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+    conn.commit()
+    conn.close()
+
+
+# --- Subscriptions ---
+
+def upsert_newsletter(sender_email: str, sender_name: str | None,
+                      unsubscribe_url: str | None, last_seen: str | None):
+    conn = get_connection()
+    existing = conn.execute(
+        "SELECT id, email_count FROM newsletter_subs WHERE sender_email = ?",
+        (sender_email,),
+    ).fetchone()
+    if existing:
+        conn.execute(
+            """UPDATE newsletter_subs SET email_count = email_count + 1,
+            last_seen = COALESCE(?, last_seen),
+            unsubscribe_url = COALESCE(?, unsubscribe_url),
+            sender_name = COALESCE(?, sender_name)
+            WHERE id = ?""",
+            (last_seen, unsubscribe_url, sender_name, existing["id"]),
+        )
+    else:
+        conn.execute(
+            """INSERT INTO newsletter_subs (sender_email, sender_name, unsubscribe_url, last_seen)
+            VALUES (?, ?, ?, ?)""",
+            (sender_email, sender_name, unsubscribe_url, last_seen),
+        )
+    conn.commit()
+    conn.close()
+
+
+def get_newsletters(show_hidden: bool = False) -> list[dict]:
+    conn = get_connection()
+    where = "" if show_hidden else "WHERE hidden = 0"
+    rows = conn.execute(
+        f"SELECT * FROM newsletter_subs {where} ORDER BY email_count DESC"
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def update_newsletter(newsletter_id: int, **kwargs):
+    conn = get_connection()
+    sets = ", ".join(f"{k} = ?" for k in kwargs)
+    vals = list(kwargs.values()) + [newsletter_id]
+    conn.execute(f"UPDATE newsletter_subs SET {sets} WHERE id = ?", vals)
+    conn.commit()
+    conn.close()
+
+
+def add_service_sub(name: str, cost: float | None, currency: str,
+                    billing_cycle: str, renewal_date: str | None,
+                    url: str | None, notes: str | None) -> int:
+    conn = get_connection()
+    conn.execute(
+        """INSERT INTO service_subs (name, cost, currency, billing_cycle, renewal_date, url, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (name, cost, currency, billing_cycle, renewal_date, url, notes),
+    )
+    sub_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    conn.commit()
+    conn.close()
+    return sub_id
+
+
+def get_service_subs() -> list[dict]:
+    conn = get_connection()
+    rows = conn.execute("SELECT * FROM service_subs ORDER BY name").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def update_service_sub(sub_id: int, **kwargs):
+    conn = get_connection()
+    sets = ", ".join(f"{k} = ?" for k in kwargs)
+    vals = list(kwargs.values()) + [sub_id]
+    conn.execute(f"UPDATE service_subs SET {sets} WHERE id = ?", vals)
+    conn.commit()
+    conn.close()
+
+
+def delete_service_sub(sub_id: int):
+    conn = get_connection()
+    conn.execute("DELETE FROM service_subs WHERE id = ?", (sub_id,))
     conn.commit()
     conn.close()
