@@ -1,90 +1,78 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoice Assistant</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-    <div class="container">
-        <header>
-            <div class="header-top">
-                <h1>Invoice Assistant</h1>
-                <div class="header-user">
-                    <span>{{ user.get('name', '') }}</span>
-                    <a href="/auth/logout">Logout</a>
-                </div>
-            </div>
-            <div class="header-controls">
+{% extends "base.html" %}
+
+{% block title %}Invoices — Progrise{% endblock %}
+
+{% block content %}
+    <header>
+        <div class="header-top">
+            <h1>Invoices</h1>
+            <div class="header-actions">
                 <span id="last-run-info"></span>
-                <div class="header-actions">
-                    <input type="month" id="scan-month" onchange="onScanMonthChange()">
-                    <button class="btn btn-primary" id="scan-btn" onclick="triggerScan()">Run Scan</button>
-                    <button class="btn btn-danger" id="cancel-btn" onclick="cancelScan()" style="display:none">Cancel</button>
-                </div>
-            </div>
-        </header>
-
-        <div class="section" id="accounts-section">
-            <div class="section-header">
-                <h2>Gmail Accounts</h2>
-            </div>
-            <div id="accounts-list" style="padding: 16px 20px;">
-                Loading...
+                <input type="month" id="scan-month" onchange="onScanMonthChange()">
+                <button class="btn btn-primary" id="scan-btn" onclick="triggerScan()">Run Scan</button>
+                <button class="btn btn-danger" id="cancel-btn" onclick="cancelScan()" style="display:none">Cancel</button>
             </div>
         </div>
+    </header>
 
-        <div class="tab-bar">
-            <button class="tab active" data-tab="accountant" onclick="switchTab('accountant')">Accountant</button>
-            <button class="tab" data-tab="ksef" onclick="switchTab('ksef')">KSeF</button>
+    <div class="section" id="accounts-section">
+        <div class="section-header">
+            <h2>Gmail Accounts</h2>
         </div>
-
-        <div class="cards db-only" id="grand-totals">
-            <div class="card">
-                <div class="label">Total</div>
-                <div class="value">-</div>
-            </div>
-        </div>
-
-        <div class="section db-only">
-            <div class="section-header">
-                <h2>Monthly Totals</h2>
-            </div>
-            <div id="monthly-totals">
-                <div class="empty">No data yet</div>
-            </div>
-        </div>
-
-        <div class="section">
-            <div class="section-header">
-                <h2>Invoices</h2>
-                <div class="filters" id="accountant-filters">
-                    <select id="month-filter" onchange="onMonthFilterChange(event)">
-                        <option value="">All months</option>
-                    </select>
-                </div>
-            </div>
-            <table id="invoice-table">
-                <thead>
-                    <tr>
-                        <th>Vendor</th>
-                        <th>Invoice #</th>
-                        <th>Sell Date</th>
-                        <th>Amount</th>
-                        <th>Currency</th>
-                        <th>From</th>
-                        <th>Account</th>
-                    </tr>
-                </thead>
-                <tbody id="invoice-table-body">
-                    <tr><td colspan="7" class="empty">No invoices found</td></tr>
-                </tbody>
-            </table>
+        <div id="accounts-list" style="padding: 16px 20px;">
+            Loading...
         </div>
     </div>
 
-    <div class="toast" id="toast"></div>
+    <div class="tab-bar">
+        <button class="tab active" data-tab="accountant" onclick="switchTab('accountant')">Accountant</button>
+        <button class="tab" data-tab="ksef" onclick="switchTab('ksef')">KSeF</button>
+    </div>
+
+    <div class="cards db-only" id="grand-totals">
+        <div class="card">
+            <div class="label">Total</div>
+            <div class="value">-</div>
+        </div>
+    </div>
+
+    <div class="section db-only">
+        <div class="section-header">
+            <h2>Monthly Totals</h2>
+        </div>
+        <div id="monthly-totals">
+            <div class="empty">No data yet</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>Invoices</h2>
+            <div class="filters" id="accountant-filters">
+                <select id="month-filter" onchange="onMonthFilterChange(event)">
+                    <option value="">All months</option>
+                </select>
+            </div>
+        </div>
+        <table id="invoice-table">
+            <thead>
+                <tr>
+                    <th>Vendor</th>
+                    <th>Invoice #</th>
+                    <th>Sell Date</th>
+                    <th>Amount</th>
+                    <th>Currency</th>
+                    <th>From</th>
+                    <th>Account</th>
+                </tr>
+            </thead>
+            <tbody id="invoice-table-body">
+                <tr><td colspan="7" class="empty">No invoices found</td></tr>
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
+
+{% block scripts %}
     <script src="/static/app.js"></script>
-</body>
-</html>
+{% endblock %}

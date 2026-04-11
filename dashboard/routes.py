@@ -24,7 +24,7 @@ templates = Jinja2Templates(directory="dashboard/templates")
 @router.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
     user = request.session.get("user", {})
-    return templates.TemplateResponse("index.html", {"request": request, "user": user})
+    return templates.TemplateResponse("index.html", {"request": request, "user": user, "active_page": "invoices"})
 
 
 # --- OAuth ---
