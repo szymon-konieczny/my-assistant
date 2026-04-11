@@ -207,10 +207,11 @@ def _scan_account(
                 data = extract_invoice_data(pdf_bytes)
                 found += 1
 
-                ksef = is_polish_invoice(data)
-                if ksef:
+                # Filter Polish invoices (handled via KSeF)
+                if is_polish_invoice(data):
                     polish += 1
-                    logger.info(f"  Polish (KSeF) invoice: {att['filename']}")
+                    logger.info(f"  Skipping Polish invoice: {att['filename']}")
+                    continue
 
                 # Deduplicate by invoice number (cross-account)
                 if data.invoice_number and db.invoice_number_exists(data.invoice_number):
@@ -237,22 +238,19 @@ def _scan_account(
                     email_date=email_date,
                     pdf_path=pdf_path,
                     scan_run_id=run_id,
-                    is_ksef=ksef,
                 )
 
-                # Only include non-KSeF invoices in accountant draft
-                if not ksef:
-                    invoices.append(
-                        {
-                            "vendor_name": data.vendor_name,
-                            "invoice_number": data.invoice_number,
-                            "amount": data.amount,
-                            "currency": data.currency,
-                            "pdf_path": pdf_path,
-                            "pdf_bytes": pdf_bytes,
-                            "filename": att["filename"],
-                        }
-                    )
+                invoices.append(
+                    {
+                        "vendor_name": data.vendor_name,
+                        "invoice_number": data.invoice_number,
+                        "amount": data.amount,
+                        "currency": data.currency,
+                        "pdf_path": pdf_path,
+                        "pdf_bytes": pdf_bytes,
+                        "filename": att["filename"],
+                    }
+                )
 
             except Exception as e:
                 logger.error(f"  Error processing {att['filename']}: {e}")

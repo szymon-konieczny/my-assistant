@@ -33,22 +33,22 @@ async function loadAccounts() {
     if (!anyConnected) btn.title = 'Connect at least one Gmail account first';
 }
 
-function ksefParam() {
-    return currentTab === 'ksef' ? 'is_ksef=true' : 'is_ksef=false';
-}
-
 function switchTab(tab) {
     currentTab = tab;
     document.querySelectorAll('.tab').forEach(el => {
         el.classList.toggle('active', el.dataset.tab === tab);
     });
-    loadGrandTotals();
-    loadMonthlyTotals();
-    loadInvoices(currentMonth);
+
+    const dbSections = document.querySelectorAll('.db-only');
+    dbSections.forEach(el => el.style.display = tab === 'ksef' ? 'none' : '');
+
+    currentMonth = '';
+    document.getElementById('month-filter').value = '';
+    loadInvoices();
 }
 
 async function loadGrandTotals() {
-    const data = await fetchJSON(`/api/invoices/grand-total?${ksefParam()}`);
+    const data = await fetchJSON('/api/invoices/grand-total');
     const container = document.getElementById('grand-totals');
     container.innerHTML = '';
 
@@ -70,7 +70,7 @@ async function loadGrandTotals() {
 }
 
 async function loadMonthlyTotals() {
-    const data = await fetchJSON(`/api/invoices/totals?${ksefParam()}`);
+    const data = await fetchJSON('/api/invoices/totals');
     const container = document.getElementById('monthly-totals');
 
     if (!data.totals || data.totals.length === 0) {
@@ -107,26 +107,74 @@ async function loadMonthlyTotals() {
 }
 
 async function loadInvoices(month = '') {
-    const base = month ? `/api/invoices?month=${month}&${ksefParam()}` : `/api/invoices?${ksefParam()}`;
-    const data = await fetchJSON(base);
     const tbody = document.getElementById('invoice-table-body');
+    const thead = document.querySelector('#invoice-table thead tr');
 
-    if (!data.invoices || data.invoices.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="empty">No invoices found</td></tr>';
-        return;
+    if (currentTab === 'ksef') {
+        thead.innerHTML = `
+            <th>Vendor</th>
+            <th>NIP</th>
+            <th>Invoice #</th>
+            <th>Issue Date</th>
+            <th>Net</th>
+            <th>Gross</th>
+            <th>Currency</th>
+        `;
+        tbody.innerHTML = '<tr><td colspan="7" class="empty">Loading from KSeF...</td></tr>';
+
+        const url = month ? `/api/ksef/invoices?month=${month}` : '/api/ksef/invoices';
+        const data = await fetchJSON(url);
+
+        if (data.error) {
+            tbody.innerHTML = `<tr><td colspan="7" class="empty">Error: ${esc(data.error)}</td></tr>`;
+            return;
+        }
+        if (!data.invoices || data.invoices.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="empty">No invoices found</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = data.invoices.map(inv => `
+            <tr>
+                <td>${esc(inv.vendor_name || '-')}</td>
+                <td>${esc(inv.vendor_nip || '-')}</td>
+                <td>${esc(inv.invoice_number || '-')}</td>
+                <td>${esc(inv.issue_date || '-')}</td>
+                <td class="amount">${inv.net_amount != null ? formatAmount(inv.net_amount) : '-'}</td>
+                <td class="amount">${inv.gross_amount != null ? formatAmount(inv.gross_amount) : '-'}</td>
+                <td>${esc(inv.currency || '-')}</td>
+            </tr>
+        `).join('');
+    } else {
+        thead.innerHTML = `
+            <th>Vendor</th>
+            <th>Invoice #</th>
+            <th>Sell Date</th>
+            <th>Amount</th>
+            <th>Currency</th>
+            <th>From</th>
+            <th>Account</th>
+        `;
+        const url = month ? `/api/invoices?month=${month}` : '/api/invoices';
+        const data = await fetchJSON(url);
+
+        if (!data.invoices || data.invoices.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="empty">No invoices found</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = data.invoices.map(inv => `
+            <tr>
+                <td>${esc(inv.vendor_name || '-')}</td>
+                <td>${esc(inv.invoice_number || '-')}</td>
+                <td>${esc(inv.sell_date || '-')}</td>
+                <td class="amount">${inv.amount != null ? formatAmount(inv.amount) : '-'}</td>
+                <td>${esc(inv.currency || '-')}</td>
+                <td>${esc(inv.sender_email || '-')}</td>
+                <td>${esc(inv.gmail_account || '-')}</td>
+            </tr>
+        `).join('');
     }
-
-    tbody.innerHTML = data.invoices.map(inv => `
-        <tr>
-            <td>${esc(inv.vendor_name || '-')}</td>
-            <td>${esc(inv.invoice_number || '-')}</td>
-            <td>${esc(inv.sell_date || '-')}</td>
-            <td class="amount">${inv.amount != null ? formatAmount(inv.amount) : '-'}</td>
-            <td>${esc(inv.currency || '-')}</td>
-            <td>${esc(inv.sender_email || '-')}</td>
-            <td>${esc(inv.gmail_account || '-')}</td>
-        </tr>
-    `).join('');
 }
 
 async function loadLastRun() {

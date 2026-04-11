@@ -1,4 +1,7 @@
+import logging
 import threading
+from calendar import monthrange
+
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -8,6 +11,9 @@ from config import settings
 from models import TriggerRequest, TriggerResponse
 from invoice.scanner import run_scan, cancel_scan
 from gmail.auth import get_auth_url, handle_oauth_callback, is_account_connected
+from ksef.client import query_invoices as ksef_query_invoices
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 templates = Jinja2Templates(directory="dashboard/templates")
@@ -55,19 +61,42 @@ async def list_accounts():
 # --- Invoices API ---
 
 @router.get("/api/invoices")
-async def list_invoices(month: str | None = None, is_ksef: bool | None = None, page: int = 1, per_page: int = 50):
-    invoices = db.get_invoices(month=month, is_ksef=is_ksef, page=page, per_page=per_page)
+async def list_invoices(month: str | None = None, page: int = 1, per_page: int = 50):
+    invoices = db.get_invoices(month=month, page=page, per_page=per_page)
     return {"invoices": invoices, "page": page, "per_page": per_page}
 
 
 @router.get("/api/invoices/totals")
-async def monthly_totals(is_ksef: bool | None = None):
-    return {"totals": db.get_monthly_totals(is_ksef=is_ksef)}
+async def monthly_totals():
+    return {"totals": db.get_monthly_totals()}
 
 
 @router.get("/api/invoices/grand-total")
-async def grand_total(is_ksef: bool | None = None):
-    return {"totals": db.get_grand_totals(is_ksef=is_ksef)}
+async def grand_total():
+    return {"totals": db.get_grand_totals()}
+
+
+# --- KSeF API ---
+
+@router.get("/api/ksef/invoices")
+async def ksef_invoices(month: str | None = None):
+    """Fetch invoices from KSeF API for a given month (YYYY-MM)."""
+    if not month:
+        from invoice.scanner import get_previous_month_range
+        date_from, date_to = get_previous_month_range()
+    else:
+        parts = month.split("-")
+        year, mon = int(parts[0]), int(parts[1])
+        last_day = monthrange(year, mon)[1]
+        date_from = f"{year}-{mon:02d}-01"
+        date_to = f"{year}-{mon:02d}-{last_day}"
+
+    try:
+        invoices = ksef_query_invoices(date_from, date_to)
+        return {"invoices": invoices}
+    except Exception as e:
+        logger.error(f"KSeF query failed: {e}")
+        return {"invoices": [], "error": str(e)}
 
 
 # --- Scan Runs API ---
