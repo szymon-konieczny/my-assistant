@@ -10,7 +10,7 @@ from gmail.auth import get_credentials
 from gmail.client import GmailClient, build_invoice_query
 from invoice.parser import extract_invoice_data
 from invoice.filters import is_polish_invoice, is_excluded_sender
-from invoice.storage import save_invoice_pdf
+from invoice.storage import save_invoice_pdf, get_invoice_pdf
 import db
 
 logger = logging.getLogger(__name__)
@@ -97,6 +97,26 @@ def run_scan(
         if _cancel_event.is_set():
             # Status already updated by cancel_scan()
             return run_id
+
+        # If no new invoices collected, load existing ones from DB for draft
+        if not collected_invoices:
+            existing = db.get_invoices_by_date_range(after_date, before_date)
+            for inv in existing:
+                if not inv.get("pdf_path"):
+                    continue
+                try:
+                    pdf_bytes = get_invoice_pdf(inv["pdf_path"])
+                    collected_invoices.append({
+                        "vendor_name": inv.get("vendor_name"),
+                        "invoice_number": inv.get("invoice_number"),
+                        "amount": inv.get("amount"),
+                        "currency": inv.get("currency"),
+                        "pdf_path": inv["pdf_path"],
+                        "pdf_bytes": pdf_bytes,
+                        "filename": inv.get("attachment_filename", "invoice.pdf"),
+                    })
+                except Exception as e:
+                    logger.error(f"Error loading PDF {inv['pdf_path']}: {e}")
 
         # Create draft to accountant if we have non-Polish invoices
         draft_created = False

@@ -190,6 +190,19 @@ def get_scan_run(run_id: str) -> dict | None:
     return dict(row) if row else None
 
 
+def get_invoices_by_date_range(after_date: str, before_date: str) -> list[dict]:
+    """Get all invoices with sell_date in the given range (inclusive)."""
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT * FROM invoices
+        WHERE sell_date >= ? AND sell_date <= ?
+        ORDER BY sell_date""",
+        (after_date, before_date),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def get_invoices_for_run(run_id: str) -> list[dict]:
     conn = get_connection()
     rows = conn.execute(
