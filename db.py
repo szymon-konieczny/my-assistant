@@ -97,6 +97,9 @@ DEFAULT_NEWS_FEEDS = {
     "Claude Code": [
         ("Anthropic Research", "https://www.anthropic.com/rss.xml"),
         ("Anthropic Engineering", "https://www.anthropic.com/engineering/rss.xml"),
+        ("HN: Claude Code", "https://hnrss.org/newest?q=%22claude+code%22"),
+        ("HN: Claude AI", "https://hnrss.org/newest?q=%22claude%22+AND+%22ai%22"),
+        ("Simon Willison", "https://simonwillison.net/atom/everything/"),
     ],
 }
 
@@ -120,18 +123,26 @@ def init_db():
     conn.commit()
     # Seed default news categories and feeds (including new ones)
     for cat_name, feeds in DEFAULT_NEWS_FEEDS.items():
-        exists = conn.execute(
+        row = conn.execute(
             "SELECT id FROM news_categories WHERE name = ?", (cat_name,)
         ).fetchone()
-        if not exists:
+        if not row:
             conn.execute("INSERT INTO news_categories (name) VALUES (?)", (cat_name,))
             cat_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
-            for feed_name, feed_url in feeds:
+        else:
+            cat_id = row[0]
+        # Add any missing feeds to existing categories
+        for feed_name, feed_url in feeds:
+            feed_exists = conn.execute(
+                "SELECT 1 FROM news_feeds WHERE category_id = ? AND feed_url = ?",
+                (cat_id, feed_url),
+            ).fetchone()
+            if not feed_exists:
                 conn.execute(
                     "INSERT INTO news_feeds (category_id, name, feed_url) VALUES (?, ?, ?)",
                     (cat_id, feed_name, feed_url),
                 )
-            conn.commit()
+        conn.commit()
     conn.close()
 
 
