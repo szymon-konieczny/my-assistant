@@ -532,3 +532,136 @@ tr:hover td { background: var(--bg); }
     color: var(--text);
     line-height: 1.5;
 }
+
+/* --- Projects --- */
+
+.add-task-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.add-task-bar input[type="text"] {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.add-task-bar select,
+.add-task-bar input[type="date"] {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    background: var(--bg);
+    font-family: inherit;
+}
+
+/* Kanban */
+
+.kanban-board {
+    display: flex;
+    gap: 16px;
+}
+
+.kanban-column {
+    flex: 1;
+    min-width: 0;
+    background: var(--bg);
+    border-radius: var(--radius);
+    padding: 12px;
+    min-height: 300px;
+    transition: background 0.15s;
+}
+
+.kanban-column.drag-over {
+    background: #e8f0fe;
+}
+
+.kanban-column-header {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    padding: 0 4px;
+}
+
+.kanban-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.kanban-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    cursor: grab;
+    transition: box-shadow 0.15s;
+    position: relative;
+}
+
+.kanban-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.kanban-card.dragging {
+    opacity: 0.5;
+}
+
+.kanban-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.kanban-card-title {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.kanban-card-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.kanban-due {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.kanban-card-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.kanban-card:hover .kanban-card-actions { opacity: 1; }
+
+.kanban-delete {
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0 4px;
+}
+.kanban-delete:hover { color: var(--danger); }
+
+.kanban-empty {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 13px;
+    padding: 20px;
+}

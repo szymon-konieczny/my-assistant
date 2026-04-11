@@ -196,7 +196,7 @@ async def trigger_news_fetch():
 @router.post("/api/news/summarize")
 async def summarize_news(category_id: int | None = None):
     """Summarize current news articles using Claude."""
-    articles = db.get_news_articles(category_id=category_id, limit=30)
+    articles = db.get_news_articles(category_id=category_id, per_category=30)
     if not articles:
         return {"summary": "No articles to summarize."}
 
@@ -247,6 +247,77 @@ async def trigger_digest(date: str | None = None):
     thread = threading.Thread(target=generate_digest, kwargs={"target_date": date}, daemon=True)
     thread.start()
     return {"status": "started"}
+
+
+# --- Projects & Tasks ---
+
+@router.get("/projects", response_class=HTMLResponse)
+async def projects_page(request: Request):
+    user = request.session.get("user", {})
+    return templates.TemplateResponse("projects.html", {"request": request, "user": user, "active_page": "projects"})
+
+
+@router.get("/api/projects")
+async def list_projects():
+    return {"projects": db.get_projects()}
+
+
+class ProjectRequest(BaseModel):
+    name: str
+
+
+@router.post("/api/projects")
+async def create_project(body: ProjectRequest):
+    proj_id = db.add_project(body.name)
+    return {"id": proj_id, "name": body.name}
+
+
+@router.delete("/api/projects/{project_id}")
+async def remove_project(project_id: int):
+    db.delete_project(project_id)
+    return {"deleted": True}
+
+
+@router.get("/api/tasks")
+async def list_tasks(project_id: int):
+    return {"tasks": db.get_tasks(project_id)}
+
+
+class TaskRequest(BaseModel):
+    project_id: int
+    title: str
+    description: str | None = None
+    priority: str = "medium"
+    due_date: str | None = None
+
+
+class TaskUpdate(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    status: str | None = None
+    priority: str | None = None
+    due_date: str | None = None
+    position: int | None = None
+
+
+@router.post("/api/tasks")
+async def create_task(body: TaskRequest):
+    task_id = db.add_task(body.project_id, body.title, body.description, body.priority, body.due_date)
+    return {"id": task_id}
+
+
+@router.put("/api/tasks/{task_id}")
+async def update_task_api(task_id: int, body: TaskUpdate):
+    updates = {k: v for k, v in body.model_dump().items() if v is not None}
+    if updates:
+        db.update_task(task_id, **updates)
+    return {"updated": True}
+
+
+@router.delete("/api/tasks/{task_id}")
+async def remove_task(task_id: int):
+    db.delete_task(task_id)
+    return {"deleted": True}
 
 
 # --- Scan Runs API ---

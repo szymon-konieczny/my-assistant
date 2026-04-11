@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Projects — Progrise{% endblock %}
+
+{% block content %}
+    <header>
+        <div class="header-top">
+            <h1>Projects</h1>
+            <div class="header-actions">
+                <select id="project-select" onchange="onProjectChange()">
+                    <option value="">Select project...</option>
+                </select>
+                <button class="btn" onclick="showNewProject()">New Project</button>
+            </div>
+        </div>
+    </header>
+
+    <div id="project-content" style="display:none">
+        <div class="tab-bar">
+            <button class="tab active" data-view="kanban" onclick="switchView('kanban')">Kanban</button>
+            <button class="tab" data-view="list" onclick="switchView('list')">List</button>
+        </div>
+
+        <div class="add-task-bar">
+            <input type="text" id="new-task-title" placeholder="New task..." onkeydown="if(event.key==='Enter')addTask()">
+            <select id="new-task-priority">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+            </select>
+            <input type="date" id="new-task-due">
+            <button class="btn btn-primary" onclick="addTask()">Add</button>
+        </div>
+
+        <div id="kanban-view">
+            <div class="kanban-board">
+                <div class="kanban-column" data-status="todo"
+                     ondragover="onDragOver(event)" ondrop="onDrop(event, 'todo')">
+                    <div class="kanban-column-header">To Do</div>
+                    <div class="kanban-cards" id="col-todo"></div>
+                </div>
+                <div class="kanban-column" data-status="in_progress"
+                     ondragover="onDragOver(event)" ondrop="onDrop(event, 'in_progress')">
+                    <div class="kanban-column-header">In Progress</div>
+                    <div class="kanban-cards" id="col-in_progress"></div>
+                </div>
+                <div class="kanban-column" data-status="done"
+                     ondragover="onDragOver(event)" ondrop="onDrop(event, 'done')">
+                    <div class="kanban-column-header">Done</div>
+                    <div class="kanban-cards" id="col-done"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="list-view" style="display:none">
+            <div class="section">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Due Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="task-list-body">
+                        <tr><td colspan="4" class="empty">No tasks</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="no-project" class="section">
+        <div class="empty">Select or create a project to get started</div>
+    </div>
+
+    <div class="modal-overlay" id="project-modal" onclick="closeModal(event)">
+        <div class="modal" style="max-width:400px">
+            <div class="modal-header">
+                <h2>New Project</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="modal-project-name" placeholder="Project name"
+                       style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:6px; font-size:14px; margin-bottom:12px;"
+                       onkeydown="if(event.key==='Enter')createProject()">
+                <button class="btn btn-primary" onclick="createProject()" style="width:100%">Create</button>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="/static/projects.js"></script>
+{% endblock %}

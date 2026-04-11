@@ -45,6 +45,25 @@ CREATE TABLE IF NOT EXISTS email_digests (
     UNIQUE(gmail_account, digest_date)
 );
 
+CREATE TABLE IF NOT EXISTS projects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT DEFAULT 'todo',
+    priority TEXT DEFAULT 'medium',
+    due_date TEXT,
+    position INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS news_categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
@@ -474,3 +493,76 @@ def get_digest_dates(limit: int = 30) -> list[str]:
     ).fetchall()
     conn.close()
     return [r["digest_date"] for r in rows]
+
+
+# --- Projects & Tasks ---
+
+def get_projects() -> list[dict]:
+    conn = get_connection()
+    rows = conn.execute("SELECT * FROM projects ORDER BY created_at DESC").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def add_project(name: str) -> int:
+    conn = get_connection()
+    conn.execute("INSERT INTO projects (name) VALUES (?)", (name,))
+    proj_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    conn.commit()
+    conn.close()
+    return proj_id
+
+
+def delete_project(project_id: int):
+    conn = get_connection()
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("DELETE FROM tasks WHERE project_id = ?", (project_id,))
+    conn.execute("DELETE FROM projects WHERE id = ?", (project_id,))
+    conn.commit()
+    conn.close()
+
+
+def get_tasks(project_id: int) -> list[dict]:
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM tasks WHERE project_id = ? ORDER BY position, created_at",
+        (project_id,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def add_task(project_id: int, title: str, description: str | None = None,
+             priority: str = "medium", due_date: str | None = None) -> int:
+    conn = get_connection()
+    # Position: append to end of todo column
+    max_pos = conn.execute(
+        "SELECT COALESCE(MAX(position), -1) FROM tasks WHERE project_id = ? AND status = 'todo'",
+        (project_id,),
+    ).fetchone()[0]
+    conn.execute(
+        """INSERT INTO tasks (project_id, title, description, priority, due_date, position)
+        VALUES (?, ?, ?, ?, ?, ?)""",
+        (project_id, title, description, priority, due_date, max_pos + 1),
+    )
+    task_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    conn.commit()
+    conn.close()
+    return task_id
+
+
+def update_task(task_id: int, **kwargs) -> bool:
+    conn = get_connection()
+    sets = ", ".join(f"{k} = ?" for k in kwargs)
+    vals = list(kwargs.values()) + [task_id]
+    conn.execute(f"UPDATE tasks SET {sets} WHERE id = ?", vals)
+    conn.commit()
+    conn.close()
+    return True
+
+
+def delete_task(task_id: int):
+    conn = get_connection()
+    conn.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+    conn.commit()
+    conn.close()
