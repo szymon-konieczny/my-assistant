@@ -106,15 +106,16 @@ async function loadArticles() {
         return;
     }
 
-    container.innerHTML = data.articles.map(a => `
-        <article class="news-article">
+    // Store for drawer access
+    window._articles = data.articles;
+
+    container.innerHTML = data.articles.map((a, i) => `
+        <article class="news-article" onclick="openDrawer(${i})" style="cursor:pointer">
             <div class="news-meta">
                 <span class="news-source">${esc(a.source_name || '')}</span>
                 <span class="news-date">${formatDate(a.published_at)}</span>
             </div>
-            <h3 class="news-title">
-                ${a.source_url ? `<a href="${esc(a.source_url)}" target="_blank" rel="noopener">${esc(a.title)}</a>` : esc(a.title)}
-            </h3>
+            <h3 class="news-title">${esc(a.title)}</h3>
             ${a.summary ? `<p class="news-summary">${esc(a.summary)}</p>` : ''}
         </article>
     `).join('');
@@ -167,6 +168,25 @@ async function showSummary() {
 function closeSummary(event) {
     if (event && event.target !== event.currentTarget) return;
     document.getElementById('summary-modal').style.display = 'none';
+}
+
+function openDrawer(index) {
+    const a = window._articles[index];
+    if (!a) return;
+
+    document.getElementById('drawer-title').textContent = a.title;
+    document.getElementById('drawer-meta').innerHTML =
+        `<span>${esc(a.source_name || '')}</span><span>${formatDate(a.published_at)}</span>` +
+        (a.source_url ? `<a href="${esc(a.source_url)}" target="_blank" rel="noopener">Open article</a>` : '');
+    document.getElementById('drawer-body').textContent = a.summary || 'No summary available.';
+
+    document.getElementById('article-drawer').classList.add('open');
+    document.getElementById('drawer-backdrop').classList.add('open');
+}
+
+function closeDrawer() {
+    document.getElementById('article-drawer').classList.remove('open');
+    document.getElementById('drawer-backdrop').classList.remove('open');
 }
 
 // --- Init ---

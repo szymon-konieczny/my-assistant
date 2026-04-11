@@ -34,6 +34,16 @@
 
     <div id="articles-list"></div>
 
+    <div class="drawer" id="article-drawer">
+        <div class="drawer-header">
+            <h3 id="drawer-title"></h3>
+            <button class="modal-close" onclick="closeDrawer()">&times;</button>
+        </div>
+        <div class="drawer-meta" id="drawer-meta"></div>
+        <div class="drawer-body" id="drawer-body"></div>
+    </div>
+    <div class="drawer-backdrop" id="drawer-backdrop" onclick="closeDrawer()"></div>
+
     <div class="modal-overlay" id="summary-modal" onclick="closeSummary(event)">
         <div class="modal">
             <div class="modal-header">
