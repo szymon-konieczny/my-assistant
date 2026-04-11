@@ -173,8 +173,8 @@ async def get_article_detail(article_id: int):
                 f"Article title: {article['title']}\n"
                 f"Source: {article['source_name']}\n\n"
                 f"Page content:\n{text}\n\n"
-                "Write a comprehensive 3-5 paragraph summary of this article. "
-                "Cover the key facts, context, and why it matters. Be informative and concise."
+                "Napisz szczegółowe podsumowanie tego artykułu w 3-5 akapitach po polsku. "
+                "Opisz kluczowe fakty, kontekst i dlaczego to jest ważne. Bądź rzeczowy i zwięzły."
             )}],
         )
         extended = response.content[0].text
@@ -207,9 +207,9 @@ async def summarize_news(category_id: int | None = None):
     )
     prompt = (
         "You are a news analyst. Below are today's news articles. "
-        "Write a concise executive summary highlighting the most important developments, "
-        "key trends, and actionable insights. Group by theme. Use bullet points. "
-        "Keep it under 500 words.\n\n" + article_text
+        "Napisz zwięzłe podsumowanie po polsku, podkreślając najważniejsze wydarzenia, "
+        "kluczowe trendy i praktyczne wnioski. Pogrupuj tematycznie. Użyj punktów. "
+        "Maksymalnie 500 słów.\n\n" + article_text
     )
     try:
         client = anthropic.Anthropic(api_key=settings.anthropic_api_key)

@@ -11,18 +11,18 @@ from gmail.client import GmailClient
 
 logger = logging.getLogger(__name__)
 
-DIGEST_PROMPT = """You are an email digest assistant. Analyze the emails below and create a structured daily digest.
+DIGEST_PROMPT = """Jesteś asystentem podsumowującym e-maile. Przeanalizuj poniższe e-maile i stwórz uporządkowane dzienne podsumowanie.
 
-Categorize each email into one of these sections:
-- **action_items**: Emails requiring a response, decision, or task from me
-- **important**: Significant updates, notifications, or information I should know about
-- **fyi**: Newsletters, promotional emails, automated notifications — low priority
+Podziel e-maile na następujące sekcje:
+- **action_items**: E-maile wymagające odpowiedzi, decyzji lub działania
+- **important**: Istotne aktualizacje, powiadomienia lub informacje
+- **fyi**: Newslettery, e-maile promocyjne, automatyczne powiadomienia — niski priorytet
 
-For each email, provide:
-- sender: who sent it
-- subject: the email subject
-- summary: 1-2 sentence summary of the content
-- urgency: "high", "medium", or "low"
+Dla każdego e-maila podaj:
+- sender: kto wysłał
+- subject: temat e-maila
+- summary: 1-2 zdania podsumowania po polsku
+- urgency: "high", "medium" lub "low"
 
 Return ONLY valid JSON in this format:
 {
@@ -31,9 +31,9 @@ Return ONLY valid JSON in this format:
   "fyi": [{"sender": "...", "subject": "...", "summary": "...", "urgency": "low"}]
 }
 
-Skip spam, delivery notifications, and purely automated system emails. If no emails fit a category, use an empty array.
+Pomiń spam, powiadomienia o dostawie i czysto automatyczne e-maile systemowe. Jeśli żaden e-mail nie pasuje do kategorii, użyj pustej tablicy.
 
-Here are the emails:
+Oto e-maile:
 """
 
 
