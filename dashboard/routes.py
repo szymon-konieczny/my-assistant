@@ -113,8 +113,8 @@ async def news_page(request: Request):
 
 
 @router.get("/api/news")
-async def list_news(category_id: int | None = None, date: str | None = None, limit: int = 50):
-    return {"articles": db.get_news_articles(category_id=category_id, date=date, limit=limit)}
+async def list_news(category_id: int | None = None, date: str | None = None, per_category: int = 5):
+    return {"articles": db.get_news_articles(category_id=category_id, date=date, per_category=per_category)}
 
 
 @router.get("/api/news/categories")

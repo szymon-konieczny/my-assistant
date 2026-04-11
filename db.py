@@ -94,6 +94,11 @@ DEFAULT_NEWS_FEEDS = {
         ("Ars Technica", "https://feeds.arstechnica.com/arstechnica/index"),
         ("Hacker News", "https://hnrss.org/frontpage"),
     ],
+    "Claude Code": [
+        ("Anthropic News", "https://www.anthropic.com/rss.xml"),
+        ("Claude Code Releases", "https://github.com/anthropics/claude-code/releases.atom"),
+        ("Anthropic Engineering", "https://www.anthropic.com/engineering/rss.xml"),
+    ],
 }
 
 
@@ -111,10 +116,12 @@ def init_db():
     if "extended_summary" not in news_cols:
         conn.execute("ALTER TABLE news_articles ADD COLUMN extended_summary TEXT")
         conn.commit()
-    # Seed default news categories and feeds
-    existing = conn.execute("SELECT COUNT(*) FROM news_categories").fetchone()[0]
-    if existing == 0:
-        for cat_name, feeds in DEFAULT_NEWS_FEEDS.items():
+    # Seed default news categories and feeds (including new ones)
+    for cat_name, feeds in DEFAULT_NEWS_FEEDS.items():
+        exists = conn.execute(
+            "SELECT id FROM news_categories WHERE name = ?", (cat_name,)
+        ).fetchone()
+        if not exists:
             conn.execute("INSERT INTO news_categories (name) VALUES (?)", (cat_name,))
             cat_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
             for feed_name, feed_url in feeds:
@@ -122,7 +129,7 @@ def init_db():
                     "INSERT INTO news_feeds (category_id, name, feed_url) VALUES (?, ?, ?)",
                     (cat_id, feed_name, feed_url),
                 )
-        conn.commit()
+            conn.commit()
     conn.close()
 
 
@@ -396,7 +403,7 @@ def update_news_article_summary(article_id: int, extended_summary: str):
     conn.close()
 
 
-def get_news_articles(category_id: int | None = None, date: str | None = None, limit: int = 50) -> list[dict]:
+def get_news_articles(category_id: int | None = None, date: str | None = None, per_category: int = 5) -> list[dict]:
     conn = get_connection()
     where = []
     params: list = []
@@ -408,8 +415,12 @@ def get_news_articles(category_id: int | None = None, date: str | None = None, l
         params.extend([date, date])
     clause = ("WHERE " + " AND ".join(where)) if where else ""
     rows = conn.execute(
-        f"SELECT * FROM news_articles {clause} ORDER BY published_at DESC LIMIT ?",
-        params + [limit],
+        f"""SELECT * FROM (
+            SELECT *, ROW_NUMBER() OVER (PARTITION BY category_id ORDER BY published_at DESC) as rn
+            FROM news_articles {clause}
+        ) WHERE rn <= ?
+        ORDER BY published_at DESC""",
+        params + [per_category],
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
