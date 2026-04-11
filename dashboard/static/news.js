@@ -1,5 +1,5 @@
 let currentCategory = '';
-let currentDate = '';
+let currentDate = ''; // empty = show latest
 let selectedIndex = -1;
 
 async function fetchJSON(url) {
@@ -109,8 +109,9 @@ async function deleteCategory(id) {
 
 async function loadArticles() {
     const container = document.getElementById('articles-list');
-    let url = '/api/news?date=' + currentDate;
-    if (currentCategory) url += `&category_id=${currentCategory}`;
+    let url = '/api/news?';
+    if (currentDate) url += `date=${currentDate}&`;
+    if (currentCategory) url += `category_id=${currentCategory}&`;
     const data = await fetchJSON(url);
 
     if (!data.articles || data.articles.length === 0) {
@@ -227,7 +228,7 @@ function closeSummary(event) {
 }
 
 function onNewsDateChange() {
-    currentDate = document.getElementById('news-date').value;
+    currentDate = document.getElementById('news-date').value || '';
     selectedIndex = -1;
     document.getElementById('detail-panel').innerHTML = '<div class="empty">Select an article to read</div>';
     loadArticles();
@@ -236,11 +237,7 @@ function onNewsDateChange() {
 // --- Init ---
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Default to yesterday
-    const now = new Date();
-    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-    currentDate = yesterday.toISOString().split('T')[0];
-    document.getElementById('news-date').value = currentDate;
+    // No date filter by default — show latest articles
     loadCategories();
     loadArticles();
 });
