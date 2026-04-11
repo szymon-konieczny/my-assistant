@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}News — Progrise{% endblock %}
+
+{% block content %}
+    <header>
+        <div class="header-top">
+            <h1>News</h1>
+            <div class="header-actions">
+                <button class="btn" onclick="toggleSettings()" id="settings-btn">Settings</button>
+                <button class="btn btn-primary" onclick="fetchNow()">Fetch Now</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="tab-bar" id="category-tabs">
+        <button class="tab active" data-cat="" onclick="filterCategory('')">All</button>
+    </div>
+
+    <div class="section" id="settings-panel" style="display:none">
+        <div class="section-header">
+            <h2>Categories &amp; Feeds</h2>
+        </div>
+        <div id="categories-settings" style="padding: 16px 20px;"></div>
+        <div style="padding: 0 20px 16px;">
+            <div style="display:flex; gap:8px; align-items:center;">
+                <input type="text" id="new-cat-name" placeholder="New category name" style="padding:6px 12px; border:1px solid var(--border); border-radius:6px; font-size:14px; flex:1;">
+                <input type="text" id="new-cat-feeds" placeholder="Feed URLs (comma-separated)" style="padding:6px 12px; border:1px solid var(--border); border-radius:6px; font-size:14px; flex:2;">
+                <button class="btn btn-primary" onclick="addCategory()">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="articles-list"></div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="/static/news.js"></script>
+{% endblock %}

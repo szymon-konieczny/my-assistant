@@ -34,6 +34,32 @@ CREATE TABLE IF NOT EXISTS scan_runs (
     date_range_start TEXT,
     date_range_end TEXT
 );
+
+CREATE TABLE IF NOT EXISTS news_categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS news_feeds (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    feed_url TEXT NOT NULL,
+    FOREIGN KEY (category_id) REFERENCES news_categories(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS news_articles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category_id INTEGER,
+    title TEXT NOT NULL,
+    summary TEXT,
+    source_url TEXT,
+    source_name TEXT,
+    published_at TEXT,
+    fetched_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(source_url)
+);
 """
 
 
@@ -44,13 +70,42 @@ def get_connection() -> sqlite3.Connection:
     return conn
 
 
+DEFAULT_NEWS_FEEDS = {
+    "AI": [
+        ("Anthropic News", "https://www.anthropic.com/rss.xml"),
+        ("OpenAI Blog", "https://openai.com/blog/rss.xml"),
+        ("Google AI Blog", "https://blog.google/technology/ai/rss/"),
+        ("MIT Tech Review AI", "https://www.technologyreview.com/topic/artificial-intelligence/feed"),
+    ],
+    "Technology": [
+        ("TechCrunch", "https://techcrunch.com/feed/"),
+        ("The Verge", "https://www.theverge.com/rss/index.xml"),
+        ("Ars Technica", "https://feeds.arstechnica.com/arstechnica/index"),
+        ("Hacker News", "https://hnrss.org/frontpage"),
+    ],
+}
+
+
 def init_db():
     conn = get_connection()
     conn.executescript(SCHEMA)
+    conn.execute("PRAGMA foreign_keys = ON")
     # Migrate: add is_ksef column if missing
     cols = [row[1] for row in conn.execute("PRAGMA table_info(invoices)").fetchall()]
     if "is_ksef" not in cols:
         conn.execute("ALTER TABLE invoices ADD COLUMN is_ksef BOOLEAN DEFAULT 0")
+        conn.commit()
+    # Seed default news categories and feeds
+    existing = conn.execute("SELECT COUNT(*) FROM news_categories").fetchone()[0]
+    if existing == 0:
+        for cat_name, feeds in DEFAULT_NEWS_FEEDS.items():
+            conn.execute("INSERT INTO news_categories (name) VALUES (?)", (cat_name,))
+            cat_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+            for feed_name, feed_url in feeds:
+                conn.execute(
+                    "INSERT INTO news_feeds (category_id, name, feed_url) VALUES (?, ?, ?)",
+                    (cat_id, feed_name, feed_url),
+                )
         conn.commit()
     conn.close()
 
@@ -229,5 +284,97 @@ def get_invoices_for_run(run_id: str) -> list[dict]:
     rows = conn.execute(
         "SELECT * FROM invoices WHERE scan_run_id = ? ORDER BY sell_date", (run_id,)
     ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+# --- News ---
+
+def get_news_categories() -> list[dict]:
+    conn = get_connection()
+    rows = conn.execute("SELECT * FROM news_categories ORDER BY name").fetchall()
+    categories = []
+    for r in rows:
+        cat = dict(r)
+        feeds = conn.execute(
+            "SELECT * FROM news_feeds WHERE category_id = ?", (r["id"],)
+        ).fetchall()
+        cat["feeds"] = [dict(f) for f in feeds]
+        categories.append(cat)
+    conn.close()
+    return categories
+
+
+def get_news_feeds() -> list[dict]:
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT nf.*, nc.name as category_name
+        FROM news_feeds nf JOIN news_categories nc ON nf.category_id = nc.id"""
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def add_news_category(name: str, feeds: list[dict]) -> int:
+    conn = get_connection()
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("INSERT INTO news_categories (name) VALUES (?)", (name,))
+    cat_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    for f in feeds:
+        conn.execute(
+            "INSERT INTO news_feeds (category_id, name, feed_url) VALUES (?, ?, ?)",
+            (cat_id, f["name"], f["feed_url"]),
+        )
+    conn.commit()
+    conn.close()
+    return cat_id
+
+
+def delete_news_category(category_id: int):
+    conn = get_connection()
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("DELETE FROM news_articles WHERE category_id = ?", (category_id,))
+    conn.execute("DELETE FROM news_feeds WHERE category_id = ?", (category_id,))
+    conn.execute("DELETE FROM news_categories WHERE id = ?", (category_id,))
+    conn.commit()
+    conn.close()
+
+
+def insert_news_article(
+    category_id: int,
+    title: str,
+    summary: str | None,
+    source_url: str | None,
+    source_name: str | None,
+    published_at: str | None,
+) -> bool:
+    conn = get_connection()
+    try:
+        conn.execute(
+            """INSERT OR IGNORE INTO news_articles
+            (category_id, title, summary, source_url, source_name, published_at)
+            VALUES (?, ?, ?, ?, ?, ?)""",
+            (category_id, title, summary, source_url, source_name, published_at),
+        )
+        inserted = conn.total_changes > 0
+        conn.commit()
+        return inserted
+    finally:
+        conn.close()
+
+
+def get_news_articles(category_id: int | None = None, limit: int = 50) -> list[dict]:
+    conn = get_connection()
+    if category_id:
+        rows = conn.execute(
+            """SELECT * FROM news_articles WHERE category_id = ?
+            ORDER BY published_at DESC LIMIT ?""",
+            (category_id, limit),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM news_articles ORDER BY published_at DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
     conn.close()
     return [dict(r) for r in rows]

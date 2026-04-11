@@ -5,13 +5,15 @@ from calendar import monthrange
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 
 import db
 from config import settings
 from models import TriggerRequest, TriggerResponse
 from invoice.scanner import run_scan, cancel_scan
 from gmail.auth import get_auth_url, handle_oauth_callback, is_account_connected
-from ksef.client import query_invoices as ksef_query_invoices
+from ksef.client import query_invoices as ksef_query_invoices, KsefRateLimitError
+from news.fetcher import fetch_all_feeds
 
 logger = logging.getLogger(__name__)
 
@@ -94,9 +96,53 @@ async def ksef_invoices(month: str | None = None):
     try:
         invoices = ksef_query_invoices(date_from, date_to)
         return {"invoices": invoices}
+    except KsefRateLimitError:
+        return {"invoices": [], "error": "Rate limit exceeded. Try again in a few minutes."}
     except Exception as e:
         logger.error(f"KSeF query failed: {e}")
-        return {"invoices": [], "error": str(e)}
+        return {"invoices": [], "error": "Failed to fetch from KSeF. Please try again later."}
+
+
+# --- News ---
+
+@router.get("/news", response_class=HTMLResponse)
+async def news_page(request: Request):
+    user = request.session.get("user", {})
+    return templates.TemplateResponse("news.html", {"request": request, "user": user, "active_page": "news"})
+
+
+@router.get("/api/news")
+async def list_news(category_id: int | None = None, limit: int = 50):
+    return {"articles": db.get_news_articles(category_id=category_id, limit=limit)}
+
+
+@router.get("/api/news/categories")
+async def list_news_categories():
+    return {"categories": db.get_news_categories()}
+
+
+class NewsCategoryRequest(BaseModel):
+    name: str
+    feeds: list[dict]  # [{"name": "...", "feed_url": "..."}]
+
+
+@router.post("/api/news/categories")
+async def create_news_category(body: NewsCategoryRequest):
+    cat_id = db.add_news_category(body.name, body.feeds)
+    return {"id": cat_id, "name": body.name}
+
+
+@router.delete("/api/news/categories/{category_id}")
+async def remove_news_category(category_id: int):
+    db.delete_news_category(category_id)
+    return {"deleted": True}
+
+
+@router.post("/api/news/fetch")
+async def trigger_news_fetch():
+    thread = threading.Thread(target=fetch_all_feeds, daemon=True)
+    thread.start()
+    return {"status": "started"}
 
 
 # --- Scan Runs API ---

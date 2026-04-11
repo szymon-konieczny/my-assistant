@@ -4,6 +4,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from config import settings
 from invoice.scanner import run_scan
+from news.fetcher import fetch_all_feeds
 
 logger = logging.getLogger(__name__)
 
@@ -16,8 +17,14 @@ def scheduled_scan():
     run_scan()
 
 
+def scheduled_news_fetch():
+    """Daily news fetch job."""
+    logger.info("Scheduled news fetch triggered")
+    fetch_all_feeds()
+
+
 def setup_scheduler():
-    """Configure the monthly scan job."""
+    """Configure scheduled jobs."""
     scheduler.add_job(
         scheduled_scan,
         CronTrigger(
@@ -32,3 +39,11 @@ def setup_scheduler():
         f"Scheduled monthly scan: day={settings.scan_cron_day}, "
         f"hour={settings.scan_cron_hour}:{settings.scan_cron_minute:02d}"
     )
+
+    scheduler.add_job(
+        scheduled_news_fetch,
+        CronTrigger(hour=8, minute=0),
+        id="daily_news_fetch",
+        replace_existing=True,
+    )
+    logger.info("Scheduled daily news fetch: 08:00")

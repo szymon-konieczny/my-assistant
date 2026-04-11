@@ -10,6 +10,11 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 
+class KsefRateLimitError(Exception):
+    """Raised when KSeF API returns 429 Too Many Requests."""
+    pass
+
+
 def _parse_nip(token: str) -> str:
     """Extract NIP from KSEF_TOKEN (format: ...|nip-XXXXXXXXXX|...)."""
     for part in token.split("|"):
@@ -26,6 +31,7 @@ def query_invoices(date_from: str, date_to: str) -> list[dict]:
         date_to: YYYY-MM-DD
 
     Returns list of dicts with invoice fields for the frontend.
+    Raises KsefRateLimitError if rate limited.
     """
     token = settings.ksef_token
     if not token:
@@ -35,18 +41,26 @@ def query_invoices(date_from: str, date_to: str) -> list[dict]:
     nip = _parse_nip(token)
 
     client = Client(environment=Environment.PRODUCTION)
-    auth = client.authentication.with_token(ksef_token=token, nip=nip)
 
-    filters = InvoicesFilter(
-        role="buyer",
-        date_type="issue_date",
-        date_from=datetime.fromisoformat(f"{date_from}T00:00:00+00:00"),
-        date_to=datetime.fromisoformat(f"{date_to}T23:59:59+00:00"),
-        amount_type="brutto",
-    )
-    params = InvoiceMetadataParams(page_size=100, sort_order="desc")
+    try:
+        auth = client.authentication.with_token(ksef_token=token, nip=nip)
 
-    response = auth.invoices.query_metadata(filters=filters, params=params)
+        filters = InvoicesFilter(
+            role="buyer",
+            date_type="issue_date",
+            date_from=datetime.fromisoformat(f"{date_from}T00:00:00+00:00"),
+            date_to=datetime.fromisoformat(f"{date_to}T23:59:59+00:00"),
+            amount_type="brutto",
+        )
+        params = InvoiceMetadataParams(page_size=100, sort_order="desc")
+
+        response = auth.invoices.query_metadata(filters=filters, params=params)
+    except Exception as e:
+        err = str(e)
+        if "429" in err or "rate limit" in err.lower() or "Too Many Requests" in err:
+            logger.warning(f"KSeF rate limited: {e}")
+            raise KsefRateLimitError("KSeF rate limit exceeded. Try again in a few minutes.")
+        raise
 
     invoices = []
     for inv in response.invoices:
