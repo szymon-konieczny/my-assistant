@@ -28,16 +28,61 @@ body {
 }
 
 header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     margin-bottom: 24px;
 }
 
-header h1 {
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.header-top h1 {
     font-size: 28px;
     font-weight: 600;
 }
+
+.header-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.header-user a { color: var(--text-secondary); }
+
+.header-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-controls > span {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.header-actions input[type="month"] {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    background: var(--bg);
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: white;
+}
+.btn-danger:hover { background: #e0352b; }
 
 .btn {
     padding: 8px 20px;
@@ -226,3 +271,6 @@ tr:hover td { background: var(--bg); }
 .monthly-total-item .month { font-weight: 600; font-size: 14px; }
 .monthly-total-item .amount { font-size: 16px; }
 .monthly-total-item .count { font-size: 12px; color: var(--text-secondary); }
+.monthly-total-item:hover { outline: 2px solid var(--accent); outline-offset: -2px; }
+.monthly-total-item.active { background: var(--accent); color: white; }
+.monthly-total-item.active .count { color: rgba(255,255,255,0.7); }

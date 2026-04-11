@@ -15,16 +15,24 @@ async function loadAccounts() {
         return;
     }
 
-    container.innerHTML = data.accounts.map(acc => `
-        <div style="display: flex; align-items: center; gap: 12px; padding: 8px 0;">
-            <span class="status-badge ${acc.connected ? 'status-completed' : 'status-failed'}">
-                ${acc.connected ? 'Connected' : 'Not connected'}
-            </span>
-            <strong>${esc(acc.email)}</strong>
-            <span style="color: var(--text-secondary);">(${esc(acc.alias)})</span>
-            ${!acc.connected ? `<a href="/oauth/connect/${esc(acc.alias)}" class="btn btn-primary" style="font-size: 12px; padding: 4px 12px;">Connect</a>` : ''}
-        </div>
-    `).join('');
+    const allConnected = data.accounts.every(a => a.connected);
+    const section = document.getElementById('accounts-section');
+
+    if (allConnected) {
+        section.style.display = 'none';
+    } else {
+        section.style.display = '';
+        container.innerHTML = data.accounts.map(acc => `
+            <div style="display: flex; align-items: center; gap: 12px; padding: 8px 0;">
+                <span class="status-badge ${acc.connected ? 'status-completed' : 'status-failed'}">
+                    ${acc.connected ? 'Connected' : 'Not connected'}
+                </span>
+                <strong>${esc(acc.email)}</strong>
+                <span style="color: var(--text-secondary);">(${esc(acc.alias)})</span>
+                ${!acc.connected ? `<a href="/oauth/connect/${esc(acc.alias)}" class="btn btn-primary" style="font-size: 12px; padding: 4px 12px;">Connect</a>` : ''}
+            </div>
+        `).join('');
+    }
 
     // Disable scan button if no accounts connected
     const anyConnected = data.accounts.some(a => a.connected);
@@ -40,11 +48,28 @@ function switchTab(tab) {
     });
 
     const dbSections = document.querySelectorAll('.db-only');
-    dbSections.forEach(el => el.style.display = tab === 'ksef' ? 'none' : '');
+    const monthSelect = document.getElementById('month-filter');
+    const ksefMonth = document.getElementById('ksef-month-filter');
 
-    currentMonth = '';
-    document.getElementById('month-filter').value = '';
-    loadInvoices();
+    if (tab === 'ksef') {
+        dbSections.forEach(el => el.style.display = 'none');
+        monthSelect.style.display = 'none';
+        ksefMonth.style.display = '';
+        // Default KSeF to previous month
+        const now = new Date();
+        const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const y = prev.getFullYear();
+        const m = String(prev.getMonth() + 1).padStart(2, '0');
+        ksefMonth.value = `${y}-${m}`;
+        currentMonth = `${y}-${m}`;
+    } else {
+        dbSections.forEach(el => el.style.display = '');
+        monthSelect.style.display = '';
+        ksefMonth.style.display = 'none';
+        currentMonth = '';
+        monthSelect.value = '';
+    }
+    loadInvoices(currentMonth);
 }
 
 async function loadGrandTotals() {
@@ -89,8 +114,8 @@ async function loadMonthlyTotals() {
         const parts = items.map(i => `${formatAmount(i.total)} ${i.currency}`).join(', ');
         const count = items.reduce((s, i) => s + i.count, 0);
         html += `
-            <div class="monthly-total-item" onclick="filterMonth('${month}')" style="cursor:pointer">
-                <div class="month">${month}</div>
+            <div class="monthly-total-item${currentMonth === month ? ' active' : ''}" data-month="${month}" onclick="filterMonth('${month}')" style="cursor:pointer">
+                <div class="month">${formatMonth(month)}</div>
                 <div class="amount">${parts}</div>
                 <div class="count">${count} invoice${count !== 1 ? 's' : ''}</div>
             </div>
@@ -276,8 +301,13 @@ async function pollForCompletion() {
 }
 
 function filterMonth(month) {
+    // Toggle: clicking the same month deselects it
+    if (currentMonth === month) month = '';
     currentMonth = month;
     document.getElementById('month-filter').value = month;
+    document.querySelectorAll('.monthly-total-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.month === month);
+    });
     loadInvoices(month);
 }
 
@@ -285,11 +315,22 @@ function onMonthFilterChange(e) {
     filterMonth(e.target.value);
 }
 
+function onKsefMonthChange(e) {
+    currentMonth = e.target.value;
+    loadInvoices(currentMonth);
+}
+
 function formatTimestamp(ts) {
     if (!ts) return '';
     const d = new Date(ts.includes('T') || ts.includes('+') ? ts : ts + 'Z');
     if (isNaN(d)) return ts;
     return d.toLocaleString('sv-SE', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function formatMonth(ym) {
+    const [y, m] = ym.split('-');
+    const d = new Date(Number(y), Number(m) - 1);
+    return d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
 }
 
 function formatAmount(num) {

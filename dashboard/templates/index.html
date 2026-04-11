@@ -9,14 +9,20 @@
 <body>
     <div class="container">
         <header>
-            <h1>Invoice Assistant</h1>
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <span id="last-run-info" style="font-size: 13px; color: var(--text-secondary);"></span>
-                <input type="month" id="scan-month" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: var(--bg);">
-                <button class="btn btn-primary" id="scan-btn" onclick="triggerScan()">Run Scan</button>
-                <button class="btn" id="cancel-btn" onclick="cancelScan()" style="display:none; background:#e53e3e; color:#fff;">Cancel</button>
-                <span style="font-size: 13px; color: var(--text-secondary);">{{ user.get('name', '') }}</span>
-                <a href="/auth/logout" style="font-size: 13px; color: var(--text-secondary);">Logout</a>
+            <div class="header-top">
+                <h1>Invoice Assistant</h1>
+                <div class="header-user">
+                    <span>{{ user.get('name', '') }}</span>
+                    <a href="/auth/logout">Logout</a>
+                </div>
+            </div>
+            <div class="header-controls">
+                <span id="last-run-info"></span>
+                <div class="header-actions">
+                    <input type="month" id="scan-month">
+                    <button class="btn btn-primary" id="scan-btn" onclick="triggerScan()">Run Scan</button>
+                    <button class="btn btn-danger" id="cancel-btn" onclick="cancelScan()" style="display:none">Cancel</button>
+                </div>
             </div>
         </header>
 
@@ -57,6 +63,7 @@
                     <select id="month-filter" onchange="onMonthFilterChange(event)">
                         <option value="">All months</option>
                     </select>
+                    <input type="month" id="ksef-month-filter" onchange="onKsefMonthChange(event)" style="display:none">
                 </div>
             </div>
             <table id="invoice-table">
