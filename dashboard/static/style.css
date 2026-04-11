@@ -56,6 +56,32 @@ header h1 {
 .btn-primary:hover { background: var(--accent-hover); }
 .btn-primary:disabled { background: var(--text-secondary); cursor: not-allowed; }
 
+.tab-bar {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px;
+    width: fit-content;
+}
+
+.tab {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 7px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    background: transparent;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+}
+
+.tab:hover { color: var(--text); }
+.tab.active { background: var(--accent); color: white; }
+
 .cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

@@ -55,19 +55,19 @@ async def list_accounts():
 # --- Invoices API ---
 
 @router.get("/api/invoices")
-async def list_invoices(month: str | None = None, page: int = 1, per_page: int = 50):
-    invoices = db.get_invoices(month=month, page=page, per_page=per_page)
+async def list_invoices(month: str | None = None, is_ksef: bool | None = None, page: int = 1, per_page: int = 50):
+    invoices = db.get_invoices(month=month, is_ksef=is_ksef, page=page, per_page=per_page)
     return {"invoices": invoices, "page": page, "per_page": per_page}
 
 
 @router.get("/api/invoices/totals")
-async def monthly_totals():
-    return {"totals": db.get_monthly_totals()}
+async def monthly_totals(is_ksef: bool | None = None):
+    return {"totals": db.get_monthly_totals(is_ksef=is_ksef)}
 
 
 @router.get("/api/invoices/grand-total")
-async def grand_total():
-    return {"totals": db.get_grand_totals()}
+async def grand_total(is_ksef: bool | None = None):
+    return {"totals": db.get_grand_totals(is_ksef=is_ksef)}
 
 
 # --- Scan Runs API ---

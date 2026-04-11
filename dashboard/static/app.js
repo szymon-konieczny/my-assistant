@@ -1,4 +1,5 @@
 let currentMonth = '';
+let currentTab = 'accountant';
 
 async function fetchJSON(url) {
     const res = await fetch(url);
@@ -32,8 +33,22 @@ async function loadAccounts() {
     if (!anyConnected) btn.title = 'Connect at least one Gmail account first';
 }
 
+function ksefParam() {
+    return currentTab === 'ksef' ? 'is_ksef=true' : 'is_ksef=false';
+}
+
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(el => {
+        el.classList.toggle('active', el.dataset.tab === tab);
+    });
+    loadGrandTotals();
+    loadMonthlyTotals();
+    loadInvoices(currentMonth);
+}
+
 async function loadGrandTotals() {
-    const data = await fetchJSON('/api/invoices/grand-total');
+    const data = await fetchJSON(`/api/invoices/grand-total?${ksefParam()}`);
     const container = document.getElementById('grand-totals');
     container.innerHTML = '';
 
@@ -55,7 +70,7 @@ async function loadGrandTotals() {
 }
 
 async function loadMonthlyTotals() {
-    const data = await fetchJSON('/api/invoices/totals');
+    const data = await fetchJSON(`/api/invoices/totals?${ksefParam()}`);
     const container = document.getElementById('monthly-totals');
 
     if (!data.totals || data.totals.length === 0) {
@@ -92,8 +107,8 @@ async function loadMonthlyTotals() {
 }
 
 async function loadInvoices(month = '') {
-    const url = month ? `/api/invoices?month=${month}` : '/api/invoices';
-    const data = await fetchJSON(url);
+    const base = month ? `/api/invoices?month=${month}&${ksefParam()}` : `/api/invoices?${ksefParam()}`;
+    const data = await fetchJSON(base);
     const tbody = document.getElementById('invoice-table-body');
 
     if (!data.invoices || data.invoices.length === 0) {

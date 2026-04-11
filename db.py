@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS invoices (
     email_date TEXT,
     pdf_path TEXT,
     scan_run_id TEXT,
+    is_ksef BOOLEAN DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now')),
     UNIQUE(gmail_message_id, attachment_filename)
 );
@@ -46,6 +47,11 @@ def get_connection() -> sqlite3.Connection:
 def init_db():
     conn = get_connection()
     conn.executescript(SCHEMA)
+    # Migrate: add is_ksef column if missing
+    cols = [row[1] for row in conn.execute("PRAGMA table_info(invoices)").fetchall()]
+    if "is_ksef" not in cols:
+        conn.execute("ALTER TABLE invoices ADD COLUMN is_ksef BOOLEAN DEFAULT 0")
+        conn.commit()
     conn.close()
 
 
@@ -63,6 +69,7 @@ def insert_invoice(
     email_date: str | None,
     pdf_path: str | None,
     scan_run_id: str | None,
+    is_ksef: bool = False,
 ) -> bool:
     """Insert an invoice record. Returns True if inserted, False if duplicate."""
     conn = get_connection()
@@ -71,12 +78,14 @@ def insert_invoice(
             """INSERT OR IGNORE INTO invoices
             (gmail_message_id, gmail_account, attachment_filename,
              vendor_name, invoice_number, sell_date, amount, currency,
-             sender_email, email_subject, email_date, pdf_path, scan_run_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+             sender_email, email_subject, email_date, pdf_path, scan_run_id,
+             is_ksef)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 gmail_message_id, gmail_account, attachment_filename,
                 vendor_name, invoice_number, sell_date, amount, currency,
                 sender_email, email_subject, email_date, pdf_path, scan_run_id,
+                is_ksef,
             ),
         )
         inserted = conn.total_changes > 0
@@ -99,56 +108,68 @@ def invoice_number_exists(invoice_number: str) -> bool:
     return row is not None
 
 
-def get_invoices(month: str | None = None, page: int = 1, per_page: int = 50) -> list[dict]:
+def get_invoices(month: str | None = None, is_ksef: bool | None = None, page: int = 1, per_page: int = 50) -> list[dict]:
     conn = get_connection()
     offset = (page - 1) * per_page
+    where = []
+    params: list = []
     if month:
-        rows = conn.execute(
-            """SELECT * FROM invoices
-            WHERE sell_date LIKE ? || '%'
-            ORDER BY sell_date DESC, created_at DESC
-            LIMIT ? OFFSET ?""",
-            (month, per_page, offset),
-        ).fetchall()
-    else:
-        rows = conn.execute(
-            """SELECT * FROM invoices
-            ORDER BY sell_date DESC, created_at DESC
-            LIMIT ? OFFSET ?""",
-            (per_page, offset),
-        ).fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
-
-
-def get_monthly_totals() -> list[dict]:
-    conn = get_connection()
+        where.append("sell_date LIKE ? || '%'")
+        params.append(month)
+    if is_ksef is not None:
+        where.append("is_ksef = ?")
+        params.append(is_ksef)
+    clause = ("WHERE " + " AND ".join(where)) if where else ""
     rows = conn.execute(
-        """SELECT
-            substr(sell_date, 1, 7) as month,
-            currency,
-            SUM(amount) as total,
-            COUNT(*) as count
-        FROM invoices
-        WHERE sell_date IS NOT NULL AND amount IS NOT NULL
-        GROUP BY month, currency
-        ORDER BY month DESC, currency"""
+        f"""SELECT * FROM invoices {clause}
+        ORDER BY sell_date DESC, created_at DESC
+        LIMIT ? OFFSET ?""",
+        params + [per_page, offset],
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
 
-def get_grand_totals() -> list[dict]:
+def get_monthly_totals(is_ksef: bool | None = None) -> list[dict]:
     conn = get_connection()
+    where = "WHERE sell_date IS NOT NULL AND amount IS NOT NULL"
+    params: list = []
+    if is_ksef is not None:
+        where += " AND is_ksef = ?"
+        params.append(is_ksef)
     rows = conn.execute(
-        """SELECT
+        f"""SELECT
+            substr(sell_date, 1, 7) as month,
             currency,
             SUM(amount) as total,
             COUNT(*) as count
         FROM invoices
-        WHERE amount IS NOT NULL
+        {where}
+        GROUP BY month, currency
+        ORDER BY month DESC, currency""",
+        params,
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_grand_totals(is_ksef: bool | None = None) -> list[dict]:
+    conn = get_connection()
+    where = "WHERE amount IS NOT NULL"
+    params: list = []
+    if is_ksef is not None:
+        where += " AND is_ksef = ?"
+        params.append(is_ksef)
+    rows = conn.execute(
+        f"""SELECT
+            currency,
+            SUM(amount) as total,
+            COUNT(*) as count
+        FROM invoices
+        {where}
         GROUP BY currency
-        ORDER BY currency"""
+        ORDER BY currency""",
+        params,
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
