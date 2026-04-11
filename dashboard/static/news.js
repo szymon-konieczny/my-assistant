@@ -1,4 +1,5 @@
 let currentCategory = '';
+let selectedIndex = -1;
 
 async function fetchJSON(url) {
     const res = await fetch(url);
@@ -9,6 +10,14 @@ function esc(s) {
     const d = document.createElement('div');
     d.textContent = s;
     return d.innerHTML;
+}
+
+function renderMarkdown(text) {
+    return text
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/^/, '<p>').replace(/$/, '</p>');
 }
 
 function showToast(msg) {
@@ -36,7 +45,6 @@ async function loadCategories() {
         tabs.innerHTML += `<button class="tab" data-cat="${cat.id}" onclick="filterCategory('${cat.id}')">${esc(cat.name)}</button>`;
     }
 
-    // Settings panel
     const settingsContainer = document.getElementById('categories-settings');
     if (data.categories.length === 0) {
         settingsContainer.innerHTML = '<div class="empty" style="padding:16px">No categories configured</div>';
@@ -61,7 +69,9 @@ function filterCategory(catId) {
     document.querySelectorAll('#category-tabs .tab').forEach(el => {
         el.classList.toggle('active', el.dataset.cat === String(catId));
     });
+    selectedIndex = -1;
     loadArticles();
+    document.getElementById('detail-panel').innerHTML = '<div class="empty">Select an article to read</div>';
 }
 
 async function addCategory() {
@@ -106,19 +116,59 @@ async function loadArticles() {
         return;
     }
 
-    // Store for drawer access
     window._articles = data.articles;
 
     container.innerHTML = data.articles.map((a, i) => `
-        <article class="news-article" onclick="openDrawer(${i})" style="cursor:pointer">
+        <article class="news-article${i === selectedIndex ? ' active' : ''}" onclick="selectArticle(${i})" style="cursor:pointer">
             <div class="news-meta">
                 <span class="news-source">${esc(a.source_name || '')}</span>
                 <span class="news-date">${formatDate(a.published_at)}</span>
             </div>
             <h3 class="news-title">${esc(a.title)}</h3>
-            ${a.summary ? `<p class="news-summary">${esc(a.summary)}</p>` : ''}
         </article>
     `).join('');
+}
+
+async function selectArticle(index) {
+    selectedIndex = index;
+    const a = window._articles[index];
+    if (!a) return;
+
+    // Highlight active article
+    document.querySelectorAll('.news-article').forEach((el, i) => {
+        el.classList.toggle('active', i === index);
+    });
+
+    const panel = document.getElementById('detail-panel');
+    panel.innerHTML = `
+        <div class="detail-header">
+            <h3>${esc(a.title)}</h3>
+        </div>
+        <div class="detail-meta">
+            <span>${esc(a.source_name || '')}</span>
+            <span>${formatDate(a.published_at)}</span>
+            ${a.source_url ? `<a href="${esc(a.source_url)}" target="_blank" rel="noopener">Open article</a>` : ''}
+        </div>
+        <div class="detail-body">
+            <p style="color:var(--text-secondary)">Loading summary...</p>
+        </div>
+    `;
+
+    // Fetch extended summary
+    const data = await fetchJSON(`/api/news/${a.id}/detail`);
+    const detail = data.article;
+
+    // Only update if this article is still selected
+    if (selectedIndex !== index) return;
+
+    const body = panel.querySelector('.detail-body');
+    if (detail && detail.extended_summary) {
+        body.innerHTML = renderMarkdown(detail.extended_summary);
+    } else if (a.summary) {
+        body.innerHTML = `<p>${esc(a.summary)}</p>`;
+    } else {
+        body.innerHTML = '<p style="color:var(--text-secondary)">No summary available.</p>';
+    }
 }
 
 // --- Actions ---
@@ -126,7 +176,6 @@ async function loadArticles() {
 async function fetchNow() {
     showToast('Fetching news...');
     await fetch('/api/news/fetch', { method: 'POST' });
-    // Poll until articles appear (fetch runs in background thread)
     let attempts = 0;
     const poll = setInterval(async () => {
         attempts++;
@@ -154,7 +203,6 @@ async function showSummary() {
     const res = await fetch(url, { method: 'POST' });
     const data = await res.json();
 
-    // Render markdown-like formatting
     content.innerHTML = data.summary
         .replace(/&/g, '&amp;').replace(/</g, '&lt;')
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
@@ -168,41 +216,6 @@ async function showSummary() {
 function closeSummary(event) {
     if (event && event.target !== event.currentTarget) return;
     document.getElementById('summary-modal').style.display = 'none';
-}
-
-async function openDrawer(index) {
-    const a = window._articles[index];
-    if (!a) return;
-
-    document.getElementById('drawer-title').textContent = a.title;
-    document.getElementById('drawer-meta').innerHTML =
-        `<span>${esc(a.source_name || '')}</span><span>${formatDate(a.published_at)}</span>` +
-        (a.source_url ? `<a href="${esc(a.source_url)}" target="_blank" rel="noopener">Open article</a>` : '');
-
-    const body = document.getElementById('drawer-body');
-    document.getElementById('article-drawer').classList.add('open');
-    document.getElementById('drawer-backdrop').classList.add('open');
-
-    // Show RSS summary while loading detail
-    body.innerHTML = `<p>${esc(a.summary || '')}</p><p style="color:var(--text-secondary);margin-top:12px">Loading full summary...</p>`;
-
-    // Fetch extended summary (generated on first access, cached after)
-    const data = await fetchJSON(`/api/news/${a.id}/detail`);
-    const detail = data.article;
-    if (detail && detail.extended_summary) {
-        body.innerHTML = detail.extended_summary
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\n\n/g, '</p><p>')
-            .replace(/^/, '<p>').replace(/$/, '</p>');
-    } else {
-        body.innerHTML = `<p>${esc(a.summary || 'No summary available.')}</p>`;
-    }
-}
-
-function closeDrawer() {
-    document.getElementById('article-drawer').classList.remove('open');
-    document.getElementById('drawer-backdrop').classList.remove('open');
 }
 
 // --- Init ---

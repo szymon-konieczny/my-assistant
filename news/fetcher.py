@@ -51,6 +51,15 @@ def fetch_feed(feed_url: str, feed_name: str, category_id: int) -> int:
         summary = _clean_html(entry.get("summary") or entry.get("description"))
         published = _parse_date(entry)
 
+        # HN RSS: summary contains metadata, extract the real article URL instead
+        if "ycombinator" in (feed_url or ""):
+            raw_desc = entry.get("summary") or entry.get("description") or ""
+            article_match = re.search(r'Article URL:\s*(https?://\S+)', raw_desc)
+            if article_match:
+                link = article_match.group(1)
+            # Strip the raw metadata from summary
+            summary = None
+
         inserted = db.insert_news_article(
             category_id=category_id,
             title=title,
