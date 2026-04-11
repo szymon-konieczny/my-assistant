@@ -7,7 +7,8 @@
         <div class="header-top">
             <h1>News</h1>
             <div class="header-actions">
-                <button class="btn" onclick="toggleSettings()" id="settings-btn">Settings</button>
+                <button class="btn" onclick="toggleSettings()">Settings</button>
+                <button class="btn" onclick="showSummary()">Summary</button>
                 <button class="btn btn-primary" onclick="fetchNow()">Fetch Now</button>
             </div>
         </div>
@@ -32,6 +33,18 @@
     </div>
 
     <div id="articles-list"></div>
+
+    <div class="modal-overlay" id="summary-modal" onclick="closeSummary(event)">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>News Summary</h2>
+                <button class="modal-close" onclick="closeSummary()">&times;</button>
+            </div>
+            <div class="modal-body" id="summary-content">
+                Loading...
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block scripts %}

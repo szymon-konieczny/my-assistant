@@ -146,6 +146,37 @@ async def trigger_news_fetch():
     return {"status": "started"}
 
 
+@router.post("/api/news/summarize")
+async def summarize_news(category_id: int | None = None):
+    """Summarize current news articles using Claude."""
+    articles = db.get_news_articles(category_id=category_id, limit=30)
+    if not articles:
+        return {"summary": "No articles to summarize."}
+
+    import anthropic
+    article_text = "\n".join(
+        f"- [{a['source_name']}] {a['title']}: {a.get('summary', '') or ''}"
+        for a in articles
+    )
+    prompt = (
+        "You are a news analyst. Below are today's news articles. "
+        "Write a concise executive summary highlighting the most important developments, "
+        "key trends, and actionable insights. Group by theme. Use bullet points. "
+        "Keep it under 500 words.\n\n" + article_text
+    )
+    try:
+        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        response = client.messages.create(
+            model=settings.claude_model,
+            max_tokens=2048,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return {"summary": response.content[0].text}
+    except Exception as e:
+        logger.error(f"News summary failed: {e}")
+        return {"summary": "Failed to generate summary. Please try again."}
+
+
 # --- Email Digest ---
 
 @router.get("/digest", response_class=HTMLResponse)

@@ -143,6 +143,32 @@ function toggleSettings() {
     panel.style.display = panel.style.display === 'none' ? '' : 'none';
 }
 
+async function showSummary() {
+    const modal = document.getElementById('summary-modal');
+    const content = document.getElementById('summary-content');
+    modal.style.display = 'flex';
+    content.innerHTML = '<div style="color:var(--text-secondary)">Generating summary...</div>';
+
+    const url = currentCategory ? `/api/news/summarize?category_id=${currentCategory}` : '/api/news/summarize';
+    const res = await fetch(url, { method: 'POST' });
+    const data = await res.json();
+
+    // Render markdown-like formatting
+    content.innerHTML = data.summary
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^##\s+(.+)$/gm, '<h3>$1</h3>')
+        .replace(/^[-•]\s+(.+)$/gm, '<li>$1</li>')
+        .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+        .replace(/\n\n/g, '<br><br>')
+        .replace(/\n/g, '<br>');
+}
+
+function closeSummary(event) {
+    if (event && event.target !== event.currentTarget) return;
+    document.getElementById('summary-modal').style.display = 'none';
+}
+
 // --- Init ---
 
 document.addEventListener('DOMContentLoaded', () => {
