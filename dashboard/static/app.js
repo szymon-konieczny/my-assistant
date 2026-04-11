@@ -87,7 +87,7 @@ async function loadGrandTotals() {
         card.className = 'card';
         card.innerHTML = `
             <div class="label">${t.currency}</div>
-            <div class="value">${formatAmount(t.total)} ${t.currency}</div>
+            <div class="value">${formatAmount(t.total)}</div>
             <div class="sub">${t.count} invoice${t.count !== 1 ? 's' : ''}</div>
         `;
         container.appendChild(card);
@@ -111,12 +111,12 @@ async function loadMonthlyTotals() {
 
     let html = '<div class="monthly-totals">';
     for (const [month, items] of Object.entries(byMonth).sort((a, b) => b[0].localeCompare(a[0]))) {
-        const parts = items.map(i => `${formatAmount(i.total)} ${i.currency}`).join(', ');
+        const lines = items.map(i => `<div>${formatAmount(i.total)} ${i.currency}</div>`).join('');
         const count = items.reduce((s, i) => s + i.count, 0);
         html += `
             <div class="monthly-total-item${currentMonth === month ? ' active' : ''}" data-month="${month}" onclick="filterMonth('${month}')" style="cursor:pointer">
                 <div class="month">${formatMonth(month)}</div>
-                <div class="amount">${parts}</div>
+                <div class="amounts">${lines}</div>
                 <div class="count">${count} invoice${count !== 1 ? 's' : ''}</div>
             </div>
         `;
@@ -215,7 +215,7 @@ async function loadLastRun() {
         el.innerHTML = `
             <span class="status-badge ${statusClass}">${r.status}</span>
             ${timestamp} &mdash;
-            ${r.invoices_found} found, ${r.invoices_polish_skipped} Polish skipped
+            ${r.invoices_found} invoices, ${r.invoices_polish_skipped} KSeF
         `;
 
         if (r.status === 'running') {
