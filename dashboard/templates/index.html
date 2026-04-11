@@ -19,7 +19,7 @@
             <div class="header-controls">
                 <span id="last-run-info"></span>
                 <div class="header-actions">
-                    <input type="month" id="scan-month">
+                    <input type="month" id="scan-month" onchange="onScanMonthChange()">
                     <button class="btn btn-primary" id="scan-btn" onclick="triggerScan()">Run Scan</button>
                     <button class="btn btn-danger" id="cancel-btn" onclick="cancelScan()" style="display:none">Cancel</button>
                 </div>
@@ -59,11 +59,10 @@
         <div class="section">
             <div class="section-header">
                 <h2>Invoices</h2>
-                <div class="filters">
+                <div class="filters" id="accountant-filters">
                     <select id="month-filter" onchange="onMonthFilterChange(event)">
                         <option value="">All months</option>
                     </select>
-                    <input type="month" id="ksef-month-filter" onchange="onKsefMonthChange(event)" style="display:none">
                 </div>
             </div>
             <table id="invoice-table">

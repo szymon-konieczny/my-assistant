@@ -48,26 +48,18 @@ function switchTab(tab) {
     });
 
     const dbSections = document.querySelectorAll('.db-only');
-    const monthSelect = document.getElementById('month-filter');
-    const ksefMonth = document.getElementById('ksef-month-filter');
+    const accountantFilters = document.getElementById('accountant-filters');
 
     if (tab === 'ksef') {
         dbSections.forEach(el => el.style.display = 'none');
-        monthSelect.style.display = 'none';
-        ksefMonth.style.display = '';
-        // Default KSeF to previous month
-        const now = new Date();
-        const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const y = prev.getFullYear();
-        const m = String(prev.getMonth() + 1).padStart(2, '0');
-        ksefMonth.value = `${y}-${m}`;
-        currentMonth = `${y}-${m}`;
+        accountantFilters.style.display = 'none';
+        // Use the header month picker value for KSeF
+        currentMonth = document.getElementById('scan-month').value;
     } else {
         dbSections.forEach(el => el.style.display = '');
-        monthSelect.style.display = '';
-        ksefMonth.style.display = 'none';
+        accountantFilters.style.display = '';
         currentMonth = '';
-        monthSelect.value = '';
+        document.getElementById('month-filter').value = '';
     }
     loadInvoices(currentMonth);
 }
@@ -315,9 +307,11 @@ function onMonthFilterChange(e) {
     filterMonth(e.target.value);
 }
 
-function onKsefMonthChange(e) {
-    currentMonth = e.target.value;
-    loadInvoices(currentMonth);
+function onScanMonthChange() {
+    if (currentTab === 'ksef') {
+        currentMonth = document.getElementById('scan-month').value;
+        loadInvoices(currentMonth);
+    }
 }
 
 function formatTimestamp(ts) {
